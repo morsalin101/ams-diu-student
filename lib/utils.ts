@@ -91,7 +91,31 @@ export const api = {
     })
     
     if (!response.ok) {
-      throw new Error('Failed to fetch exam results')
+      const errorData = await response.json().catch(() => null)
+      
+      if (response.status === 403) {
+        throw new Error(errorData?.error || 'Results are not published yet')
+      } else if (response.status === 404) {
+        throw new Error(errorData?.error || 'No results found for this exam')
+      } else {
+        throw new Error(errorData?.error || 'Failed to fetch exam results')
+      }
+    }
+    
+    return response.json()
+  },
+
+  // Get student scheduled exams
+  getStudentScheduledExams: async (studentId: number) => {
+    const response = await fetch(`${API_BASE_URL}/student/${studentId}/scheduled-exams/`, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch student scheduled exams')
     }
     
     return response.json()

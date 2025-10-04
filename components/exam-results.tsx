@@ -62,9 +62,17 @@ export default function ExamResults() {
         // Fetch exam results from API
         const resultData = await api.getExamResult(submissionData.examId, student.studentId)
         setResults(resultData)
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch results:', error)
-        setError("Failed to load exam results")
+        
+        // Handle specific error messages from backend
+        if (error.message.includes('Results are not published yet')) {
+          setError("Results are not published yet. Please check back later.")
+        } else if (error.message.includes('No results found')) {
+          setError("No results found for this exam. Please contact the administration.")
+        } else {
+          setError("Failed to load exam results. Please try again later.")
+        }
       } finally {
         setLoading(false)
       }
@@ -108,18 +116,102 @@ export default function ExamResults() {
   }
 
   if (error) {
+    const isResultsNotPublished = error.includes('Results are not published yet')
+    
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <Alert className="border-red-200 bg-red-50">
-              <AlertDescription className="text-red-700">{error}</AlertDescription>
-            </Alert>
-            <Button onClick={() => router.push("/pre-exam")} className="w-full mt-4">
-              Go Back
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-white p-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-8">
+            <div className="flex-1 text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Daffodil International University</h1>
+              <h2 className="text-2xl font-semibold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent mb-4">Admission Test Results</h2>
+            </div>
+            <div className="flex items-start">
+              <button
+                onClick={() => router.push("/")}
+                className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200 mt-4"
+                title="Back to Home"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 17L21 12L16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Results Status Card */}
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardHeader>
+              <CardTitle className="text-center text-red-900 flex items-center justify-center">
+                <svg className="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                {isResultsNotPublished ? 'Results Not Published Yet' : 'Error Loading Results'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <div className="text-red-800 text-lg font-semibold mb-4">
+                {isResultsNotPublished ? (
+                  <>
+                    <p className="mb-2">Your exam has been submitted successfully!</p>
+                    <p className="text-red-600 font-bold text-xl">RESULTS ARE NOT PUBLISHED YET</p>
+                    <p className="mt-2">Please check back later. Results will be available once they are published by the administration.</p>
+                  </>
+                ) : (
+                  <p>{error}</p>
+                )}
+              </div>
+              
+              {isResultsNotPublished && (
+                <div className="bg-white p-4 rounded-lg border border-red-200 mt-4">
+                  <h3 className="font-semibold text-red-900 mb-2">What happens next?</h3>
+                  <ul className="text-red-700 text-sm space-y-1">
+                    <li>• Your exam responses have been recorded</li>
+                    <li>• The administration is reviewing and processing all submissions</li>
+                    <li>• Results will be published once the review process is complete</li>
+                    <li>• You will be able to view your results here once they are available</li>
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="text-center space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={() => router.push("/dashboard")} 
+                className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252570] hover:to-[#3C41A5] px-8 py-2"
+              >
+                Go to Dashboard
+              </Button>
+              <Button 
+                onClick={() => router.push("/pre-exam")} 
+                variant="outline"
+                className="border-[#2E3094] text-[#2E3094] hover:bg-[#2E3094] hover:text-white px-8 py-2"
+              >
+                Go to Pre-Exam
+              </Button>
+              {isResultsNotPublished && (
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  variant="ghost"
+                  className="text-[#2E3094] hover:bg-[#2E3094]/10 px-8 py-2"
+                >
+                  Refresh Page
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8 text-sm text-gray-600">
+            <p>For any queries regarding results, please contact the admissions office.</p>
+          </div>
+        </div>
       </div>
     )
   }
@@ -235,7 +327,7 @@ export default function ExamResults() {
         </Card>
 
         {/* Exam Statistics */}
-        <Card className="mb-6 border-gray-200 bg-white">
+        {/* <Card className="mb-6 border-gray-200 bg-white">
           <CardHeader>
             <CardTitle className="text-gray-900">Exam Statistics</CardTitle>
           </CardHeader>
@@ -271,7 +363,7 @@ export default function ExamResults() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-600">

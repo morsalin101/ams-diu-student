@@ -41,17 +41,17 @@ export default function LoginForm() {
         }),
       )
       
-      // Fetch exam schedule
+      // Fetch exam schedule (keep for backward compatibility)
       try {
         const scheduleData = await api.getSchedules()
         localStorage.setItem('examSchedule', JSON.stringify(scheduleData))
       } catch (scheduleError) {
         console.error('Failed to fetch schedule:', scheduleError)
-        // Continue to pre-exam page even if schedule fetch fails
+        // Continue to dashboard even if old schedule fetch fails
       }
       
       
-      router.push("/pre-exam")
+      router.push("/dashboard")
     } catch (error) {
       console.error('Login error:', error)
       setError("Invalid Student ID or Password. Please try again.")

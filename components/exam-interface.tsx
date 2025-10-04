@@ -72,32 +72,49 @@ export default function ExamInterface() {
       const student = JSON.parse(studentDataStr)
       setStudentData(student)
       
-      // Get exam schedule to find active exam
-      const scheduleDataStr = localStorage.getItem("examSchedule")
-      if (!scheduleDataStr) {
-        setError("No exam schedule found")
+      // Get selected exam ID from dashboard
+      const selectedExamIdStr = localStorage.getItem("selectedExamId")
+      if (!selectedExamIdStr) {
+        // Fallback to old method for backward compatibility
+        const scheduleDataStr = localStorage.getItem("examSchedule")
+        if (scheduleDataStr) {
+          const scheduleData = JSON.parse(scheduleDataStr)
+          const activeExam = scheduleData.results?.find((exam: any) => exam.is_active)
+          if (activeExam) {
+            try {
+              const examQuestions = await api.getExamQuestions(activeExam.exam)
+              setExamData(examQuestions)
+              const endTime = new Date(activeExam.end_time).getTime()
+              const now = new Date().getTime()
+              const timeLeftSeconds = Math.max(0, Math.floor((endTime - now) / 1000))
+              setTimeLeft(timeLeftSeconds)
+              const uniqueSubjects = [...new Set(examQuestions.questions.map((q: any) => q.subject))]
+              setSubjects(uniqueSubjects)
+              setCurrentSubject(uniqueSubjects[0] || "")
+              setLoading(false)
+              return
+            } catch (error) {
+              console.error('Failed to fetch exam questions:', error)
+              setError("Failed to load exam questions")
+            }
+          }
+        }
+        setError("No exam selected. Please go back to the dashboard.")
         setLoading(false)
         return
       }
       
-      const scheduleData = JSON.parse(scheduleDataStr)
-      const activeExam = scheduleData.results?.find((exam: any) => exam.is_active)
-      
-      if (!activeExam) {
-        setError("No active exam found")
-        setLoading(false)
-        return
-      }
+      const selectedExamId = parseInt(selectedExamIdStr)
       
       try {
-        // Fetch exam questions
-        const examQuestions = await api.getExamQuestions(activeExam.exam)
+        // Fetch exam questions for the selected exam
+        const examQuestions = await api.getExamQuestions(selectedExamId)
         setExamData(examQuestions)
         
-        // Calculate time left based on exam end time
-        const endTime = new Date(activeExam.end_time).getTime()
-        const now = new Date().getTime()
-        const timeLeftSeconds = Math.max(0, Math.floor((endTime - now) / 1000))
+        // For now, set a default duration if not provided in the API response
+        // You might want to get this from the student scheduled exams API
+        const defaultDurationMinutes = examQuestions.exam_details?.duration_minutes || 120
+        const timeLeftSeconds = defaultDurationMinutes * 60
         setTimeLeft(timeLeftSeconds)
         
         // Group questions by subject
@@ -136,6 +153,7 @@ export default function ExamInterface() {
   const handleLogout = () => {
     localStorage.removeItem("studentData")
     localStorage.removeItem("examSchedule")
+    localStorage.removeItem("selectedExamId")
     router.push("/")
   }
 

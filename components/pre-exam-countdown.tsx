@@ -111,6 +111,7 @@ export default function PreExamCountdown() {
   const handleLogout = () => {
     localStorage.removeItem("studentData")
     localStorage.removeItem("examSchedule")
+    localStorage.removeItem("selectedExamId")
     router.push("/")
   }
 
@@ -141,10 +142,18 @@ export default function PreExamCountdown() {
             </div>
             <h2 className="text-2xl font-semibold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent mb-4">Admission Test, Summer 2026</h2>
           </div>
-          <div className="flex items-start">
+          <div className="flex items-start gap-2">
+            <Button
+              onClick={() => router.push("/dashboard")}
+              variant="outline"
+              size="sm"
+              className="border-[#2E3094] text-[#2E3094] hover:bg-[#2E3094] hover:text-white"
+            >
+              View Dashboard
+            </Button>
             <button
               onClick={handleLogout}
-              className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200 mt-4"
+              className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200 mt-1"
               title="Logout"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
