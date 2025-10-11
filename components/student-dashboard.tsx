@@ -35,6 +35,14 @@ interface TeacherInfo {
   teacher_name: string
 }
 
+interface SubmissionStatus {
+  number_of_submissions: number
+  total_questions: number
+  has_submitted: boolean
+  is_completed: boolean
+  completion_percentage: number
+}
+
 interface ScheduledExam {
   assignment_id: number
   schedule_id: number
@@ -42,6 +50,7 @@ interface ScheduledExam {
   exam_details: ExamDetails
   schedule_details: ScheduleDetails
   teacher_info: TeacherInfo
+  submission_status: SubmissionStatus
   assigned_at: string
 }
 
@@ -235,6 +244,11 @@ export default function StudentDashboard() {
   const getExamStatusBadge = (exam: ScheduledExam) => {
     const timer = examTimers[exam.exam_id]
     if (!timer) return <Badge variant="outline">Loading...</Badge>
+
+    // Check if already submitted
+    if (exam.submission_status && exam.submission_status.number_of_submissions > 0) {
+      return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Submitted</Badge>
+    }
 
     if (timer.hasEnded) {
       return <Badge className="bg-red-100 text-red-800 border-red-200">Ended</Badge>
@@ -452,6 +466,25 @@ export default function StudentDashboard() {
                         </div>
                       </div>
 
+                      {/* Submission Status */}
+                      {exam.submission_status && exam.submission_status.number_of_submissions > 0 && (
+                        <div className="border-t pt-4 mb-4">
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <p className="text-blue-800 font-semibold text-sm flex items-center">
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Already Submitted
+                            </p>
+                            <div className="mt-2 text-blue-700 text-xs">
+                              <p>Submitted: {exam.submission_status.number_of_submissions}/{exam.submission_status.total_questions} questions</p>
+                              <p>Progress: {exam.submission_status.completion_percentage.toFixed(1)}%</p>
+                              <p>Status: {exam.submission_status.is_completed ? 'Completed' : 'Partial'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Countdown Timer or Status */}
                       {timer && (
                         <div className="border-t pt-4">
@@ -469,12 +502,26 @@ export default function StudentDashboard() {
                           ) : timer.canStart ? (
                             <div className="text-center">
                               <p className="text-green-600 font-semibold mb-2">Exam is now available!</p>
-                              <Button
-                                onClick={() => handleStartExam(exam.exam_id)}
-                                className="w-full bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3]"
-                              >
-                                Start Exam
-                              </Button>
+                              {exam.submission_status && exam.submission_status.number_of_submissions > 0 ? (
+                                <div className="space-y-2">
+                                  <p className="text-blue-600 text-sm">You have already submitted this exam</p>
+                                  <Button
+                                    onClick={() => handleCheckResults(exam.exam_id)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                                  >
+                                    View Submission
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  onClick={() => handleStartExam(exam.exam_id)}
+                                  className="w-full bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3]"
+                                >
+                                  Start Exam
+                                </Button>
+                              )}
                             </div>
                           ) : timer.isActive && !exam.schedule_details.is_active ? (
                             <div className="text-center">
