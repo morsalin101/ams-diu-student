@@ -185,46 +185,6 @@ export const timeUtils = {
     return `${day} ${month} ${year}, ${hoursStr}:${minutes} ${ampm}`;
   },
 
-  /**
-   * Returns date/time parts in BD-friendly format.
-   * Example input: ISO string; Output: { dateLabel: '16 October 2025', timeLabel: '02:20 PM' }
-   */
-  getDateTimeParts: (dateTimeString: string): { dateLabel: string; timeLabel: string } => {
-    const date = new Date(dateTimeString);
-    if (isNaN(date.getTime())) {
-      return { dateLabel: '', timeLabel: '' };
-    }
-
-    const day = date.getDate();
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    const month = monthNames[date.getMonth()];
-    const year = date.getFullYear();
-
-    let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    const hoursStr = hours.toString().padStart(2, '0');
-
-    return {
-      dateLabel: `${day} ${month} ${year}`,
-      timeLabel: `${hoursStr}:${minutes} ${ampm}`,
-    };
-  },
-
   calculateTimeUntilExam: (startTime: string) => {
     const now = new Date().getTime();
     const examStart = new Date(startTime).getTime();
