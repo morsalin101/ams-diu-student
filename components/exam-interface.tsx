@@ -337,35 +337,62 @@ export default function ExamInterface() {
             </div>
 
             {/* Student Info & Timer */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 shadow-sm border border-blue-100">
-              <div className="space-y-1.5">
-                <p className="text-sm font-semibold text-gray-900">
-                  Student’s Name:{' '}
-                  <span className="font-normal text-gray-700">
-                    {studentData?.fullName || 'N/A'}
-                  </span>
-                </p>
+            <div className="rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm">
+              <div className="space-y-3 text-left">
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Student&apos;s Name:{' '}
+                    <span className="font-normal text-gray-700">
+                      {studentData?.fullName || 'N/A'}
+                    </span>
+                  </p>
 
-                <p className="text-sm font-semibold text-gray-900">
-                  Serial No:{' '}
-                  <span className="font-normal text-gray-700">
-                    {studentData?.fId || 'N/A'}
-                  </span>
-                </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Serial No:{' '}
+                    <span className="font-normal text-gray-700">
+                      {studentData?.fId || 'N/A'}
+                    </span>
+                  </p>
 
-                <p className="text-sm font-semibold text-gray-900">
-                  Department:{' '}
-                  <span className="font-normal text-gray-700">
-                    {examData?.exam_details?.department || 'N/A'}
-                  </span>
-                </p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Department:{' '}
+                    <span className="font-normal text-gray-700">
+                      {examData?.exam_details?.department || 'N/A'}
+                    </span>
+                  </p>
+                </div>
 
-                <p className="text-sm font-semibold text-gray-900">
-                  Time Left:{' '}
-                  <span className="font-mono font-bold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent">
+                <div className="flex flex-col items-center rounded-xl border border-[#2E3094] bg-[#2E3094]/5 p-2 text-center">
+                  <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-[#2E3094]/50 bg-white">
+                    <svg
+                      className="h-5 w-5 text-[#2E3094]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 8v4l2.5 1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="8"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#2E3094]/80">
+                    Time Left
+                  </p>
+                  <div className="mt-1 text-xl font-semibold text-[#2E3094] font-mono">
                     {timeUtils.formatTime(timeLeft)}
-                  </span>
-                </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -398,38 +425,57 @@ export default function ExamInterface() {
 
             {/* Right Side: Student Info + Timer + Logout */}
             <div className="flex items-center gap-6">
-              <div className="text-right space-y-2">
-                <div>
-                  <span className="text-base font-bold text-black">
-                    Student's Name:{' '}
-                  </span>
-                  <span className="text-base text-black">
+              <div className="space-y-1.5 text-left">
+                <p className="text-base font-semibold text-black">
+                  Student&apos;s Name:{' '}
+                  <span className="font-normal">
                     {studentData?.fullName || 'Student'}
                   </span>
-                </div>
-                <div>
-                  <span className="text-base font-bold text-black">
-                    Serial No:{' '}
-                  </span>
-                  <span className="text-base text-black">
+                </p>
+                <p className="text-base font-semibold text-black">
+                  Serial No:{' '}
+                  <span className="font-normal">
                     {studentData?.fId || 'N/A'}
                   </span>
-                </div>
-                <div>
-                  <span className="text-base font-bold text-black">
-                    Department:{' '}
-                  </span>
-                  <span className="text-base text-black">
+                </p>
+                <p className="text-base font-semibold text-black">
+                  Department:{' '}
+                  <span className="font-normal">
                     {examData.exam_details.department}
                   </span>
-                </div>
+                </p>
               </div>
 
               <div className="h-16 w-px bg-gray-300"></div>
 
-              <div className="text-center">
-                <p className="text-xs text-gray-600 mb-1">Time Left</p>
-                <div className="text-xl font-bold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent font-mono">
+              <div className="flex flex-col items-center rounded-xl border border-[#2E3094] bg-[#2E3094]/5 px-4 py-3 text-center shadow-sm">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-[#2E3094]/50 bg-white">
+                  <svg
+                    className="h-5 w-5 text-[#2E3094]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 8v4l2.5 1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="8"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
+                </div>
+                <p className="text-xs font-medium uppercase tracking-wide text-[#2E3094]/80">
+                  Time Left
+                </p>
+                <div className="mt-1 text-2xl font-semibold text-[#2E3094] font-mono">
                   {timeUtils.formatTime(timeLeft)}
                 </div>
               </div>
