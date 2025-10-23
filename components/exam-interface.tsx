@@ -534,14 +534,15 @@ export default function ExamInterface() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 {/* All Questions Button */}
+
                 <Button
                   variant={currentSubject === 'All' ? 'default' : 'outline'}
                   className={`flex items-center gap-2 ${
                     currentSubject === 'All'
                       ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white border-[#2E3094]'
-                      : 'border-[#2E3094] text-[#2E3094] hover:bg-gradient-to-r hover:from-[#2E3094]/10 hover:to-[#4C51BF]/10 hover:border-[#4C51BF]'
+                      : '!bg-zinc-100/50 text-gray-600 hover:border-gray-400  hover:text-gray-800 border-gray-300 shadow-sm'
                   }`}
                   onClick={() => setCurrentSubject('All')}
                 >
@@ -551,7 +552,7 @@ export default function ExamInterface() {
                     className={
                       currentSubject === 'All'
                         ? 'bg-white/20 text-white'
-                        : 'bg-[#2E3094]/10 text-[#2E3094]'
+                        : 'bg-gray-100 text-gray-600'
                     }
                   >
                     {getTotalAnsweredCount()}/
@@ -567,7 +568,7 @@ export default function ExamInterface() {
                     className={`flex items-center gap-2 ${
                       currentSubject === subject
                         ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white border-[#2E3094]'
-                        : 'border-[#2E3094] text-[#2E3094] hover:bg-gradient-to-r hover:from-[#2E3094]/10 hover:to-[#4C51BF]/10 hover:border-[#4C51BF]'
+                        : '!bg-zinc-100/50 text-gray-600 hover:border-gray-400  hover:text-gray-800 border-gray-300 shadow-sm'
                     }`}
                     onClick={() => setCurrentSubject(subject)}
                   >
@@ -577,7 +578,7 @@ export default function ExamInterface() {
                       className={
                         currentSubject === subject
                           ? 'bg-white/20 text-white'
-                          : 'bg-[#2E3094]/10 text-[#2E3094]'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                       }
                     >
                       {getAnsweredCount(subject)}/{getTotalQuestions(subject)}
