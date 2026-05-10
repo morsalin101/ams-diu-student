@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // API Base URL
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'https://ams-diu-backend-l1ag.onrender.com/api';
 
 // API utility functions
 export const api = {
