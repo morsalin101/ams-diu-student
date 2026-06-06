@@ -6,7 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // API Base URL
-
 const API_BASE_URL = 'http://165.101.23.48/';
 
 // API utility functions
