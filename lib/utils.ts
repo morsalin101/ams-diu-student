@@ -12,7 +12,7 @@ const API_BASE_URL = 'https://api.tatomal.me/';
 export const api = {
   // Student login
   login: async (username: string, password: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/student/login/`, {
+    const response = await fetch(`${API_BASE_URL}api/student/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
