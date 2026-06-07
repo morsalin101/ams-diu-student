@@ -6,13 +6,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // API Base URL
-const API_BASE_URL = 'https://api.tatomal.me/';
+const API_BASE_URL = 'https://api.tatomal.me/api';
 
 // API utility functions
 export const api = {
   // Student login
   login: async (username: string, password: string) => {
-    const response = await fetch(`${API_BASE_URL}api/student/login/`, {
+    const response = await fetch(`${API_BASE_URL}/student/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
