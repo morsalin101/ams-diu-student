@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // API Base URL
-const API_BASE_URL = 'https://api.tatomal.me';
+const API_BASE_URL = 'https://api.tatomal.me/api';
 
 // API utility functions
 export const api = {
