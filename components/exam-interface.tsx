@@ -14,15 +14,17 @@ import { api, timeUtils } from '@/lib/utils';
 interface Question {
   question_id: number;
   question_text: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
+  options: Record<string, string>;
+  displayOptions?: DisplayOption[];
   question_type: 'option' | 'text';
   marks: number;
   subject: string;
+}
+
+interface DisplayOption {
+  originalKey: string;
+  displayKey: string;
+  value: string;
 }
 
 interface ExamData {
@@ -45,6 +47,99 @@ interface StudentData {
   createdAt: string;
   message: string;
 }
+
+const getSeedHash = (seedInput: string) => {
+  let hash = 2166136261;
+
+  for (let index = 0; index < seedInput.length; index++) {
+    hash ^= seedInput.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+};
+
+const getSeededRandom = (seedInput: string) => {
+  let seed = getSeedHash(seedInput);
+
+  return () => {
+    seed += 0x6d2b79f5;
+    let value = seed;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const getSeededShuffle = <T,>(items: T[], seedInput: string) => {
+  const shuffledItems = [...items];
+  const random = getSeededRandom(seedInput);
+
+  for (let index = shuffledItems.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffledItems[index], shuffledItems[swapIndex]] = [
+      shuffledItems[swapIndex],
+      shuffledItems[index],
+    ];
+  }
+
+  return shuffledItems;
+};
+
+const getDisplayOptions = (
+  question: Question,
+  studentId: number,
+  examId: number
+): DisplayOption[] => {
+  if (question.question_type !== 'option') {
+    return [];
+  }
+
+  return getSeededShuffle(
+    Object.entries(question.options || {}),
+    `${studentId}:${examId}:question:${question.question_id}:options`
+  ).map(([originalKey, value], index) => ({
+    originalKey,
+    displayKey: String.fromCharCode(65 + index),
+    value: String(value),
+  }));
+};
+
+const applyExamPresentationShuffle = (
+  examQuestions: ExamData,
+  studentId: number
+): ExamData => {
+  const questionsBySubject = new Map<string, Question[]>();
+  const subjectOrder: string[] = [];
+
+  examQuestions.questions.forEach(question => {
+    if (!questionsBySubject.has(question.subject)) {
+      questionsBySubject.set(question.subject, []);
+      subjectOrder.push(question.subject);
+    }
+
+    questionsBySubject.get(question.subject)?.push(question);
+  });
+
+  const shuffledQuestions = subjectOrder.flatMap(subject =>
+    getSeededShuffle(
+      questionsBySubject.get(subject) || [],
+      `${studentId}:${examQuestions.exam_id}:subject:${subject}`
+    ).map(question => ({
+      ...question,
+      displayOptions: getDisplayOptions(
+        question,
+        studentId,
+        examQuestions.exam_id
+      ),
+    }))
+  );
+
+  return {
+    ...examQuestions,
+    questions: shuffledQuestions,
+  };
+};
 
 export default function ExamInterface() {
   const [studentData, setStudentData] = useState<StudentData | null>(null);
@@ -83,7 +178,11 @@ export default function ExamInterface() {
           if (activeExam) {
             try {
               const examQuestions = await api.getExamQuestions(activeExam.exam);
-              setExamData(examQuestions);
+              const presentedExamQuestions = applyExamPresentationShuffle(
+                examQuestions,
+                student.studentId
+              );
+              setExamData(presentedExamQuestions);
               const endTime = new Date(activeExam.end_time).getTime();
               const now = new Date().getTime();
               const timeLeftSeconds = Math.max(
@@ -92,7 +191,11 @@ export default function ExamInterface() {
               );
               setTimeLeft(timeLeftSeconds);
               const uniqueSubjects = [
-                ...new Set(examQuestions.questions.map((q: any) => q.subject)),
+                ...new Set(
+                  presentedExamQuestions.questions.map(
+                    (q: Question) => q.subject
+                  )
+                ),
               ] as string[];
               setSubjects(uniqueSubjects);
               setCurrentSubject('All');
@@ -114,7 +217,11 @@ export default function ExamInterface() {
       try {
         // Fetch exam questions for the selected exam
         const examQuestions = await api.getExamQuestions(selectedExamId);
-        setExamData(examQuestions);
+        const presentedExamQuestions = applyExamPresentationShuffle(
+          examQuestions,
+          student.studentId
+        );
+        setExamData(presentedExamQuestions);
 
         // For now, set a default duration if not provided in the API response
         // You might want to get this from the student scheduled exams API
@@ -125,7 +232,9 @@ export default function ExamInterface() {
 
         // Group questions by subject
         const uniqueSubjects = [
-          ...new Set(examQuestions.questions.map((q: Question) => q.subject)),
+          ...new Set(
+            presentedExamQuestions.questions.map((q: Question) => q.subject)
+          ),
         ] as string[];
         setSubjects(uniqueSubjects);
         setCurrentSubject('All');
@@ -645,13 +754,20 @@ export default function ExamInterface() {
 
                   {question.question_type === 'option' ? (
                     <div className="space-y-3">
-                      {Object.entries(question.options).map(
-                        ([optionKey, optionValue]) => {
+                      {(
+                        question.displayOptions ||
+                        getDisplayOptions(
+                          question,
+                          studentData.studentId,
+                          examData.exam_id
+                        )
+                      ).map(option => {
                           const isSelected =
-                            answers[question.question_id] === optionKey;
+                            answers[question.question_id] ===
+                            option.originalKey;
                           return (
                             <div
-                              key={optionKey}
+                              key={option.originalKey}
                               className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-[#2E3094]/10 hover:to-[#4C51BF]/10 ${
                                 isSelected
                                   ? 'border-[#2E3094] bg-gradient-to-r from-[#2E3094]/20 to-[#4C51BF]/20 shadow-md'
@@ -660,7 +776,7 @@ export default function ExamInterface() {
                               onClick={() =>
                                 handleAnswerChange(
                                   question.question_id,
-                                  optionKey
+                                  option.originalKey
                                 )
                               }
                             >
@@ -683,14 +799,13 @@ export default function ExamInterface() {
                                 }`}
                               >
                                 <span className="font-semibold text-black mr-2">
-                                  {optionKey}.
+                                  {option.displayKey}.
                                 </span>
-                                {optionValue}
+                                {option.value}
                               </Label>
                             </div>
                           );
-                        }
-                      )}
+                        })}
                     </div>
                   ) : (
                     <div className="space-y-2">
