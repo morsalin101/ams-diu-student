@@ -1,0 +1,20 @@
+# ==========================================================================
+#  AMS-DIU Student frontend (Next.js, "next start").
+#  Routed by the shared nginx-proxy via VIRTUAL_HOST. No host ports needed.
+# ==========================================================================
+services:
+  student:
+    build: .
+    container_name: ams-student
+    restart: unless-stopped
+    environment:
+      VIRTUAL_HOST: ${STUDENT_DOMAIN}
+      VIRTUAL_PORT: "3000"
+      LETSENCRYPT_HOST: ${STUDENT_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
