@@ -212,7 +212,7 @@ export default function StudentDashboard() {
         JSON.stringify({
           examId: examId,
           submittedAt: new Date().toISOString(),
-        })
+        }),
       );
 
       router.push('/results');
@@ -224,7 +224,7 @@ export default function StudentDashboard() {
         alert('Results are not published yet. Please check back later.');
       } else if (error.message.includes('No results found')) {
         alert(
-          'No results found for this exam. Please contact the administration.'
+          'No results found for this exam. Please contact the administration.',
         );
       } else {
         alert('Failed to check results. Please try again later.');
@@ -310,7 +310,7 @@ export default function StudentDashboard() {
     <div className="min-h-screen bg-gray-50 px-6 md:px-12 py-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-8">
+        <div className=" flex items-center justify-between mb-4 flex-wrap gap-8">
           <div className="flex items-center gap-6">
             <div className="flex-shrink-0">
               <Image
@@ -361,75 +361,62 @@ export default function StudentDashboard() {
         </div>
 
         {/* Student Information */}
-        <Card className="mb-8 border-gray-200 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm ">
-          <CardHeader className="pb-4 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2E3094] to-[#4C51BF] flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </div>
-                <CardTitle className="text-xl font-bold text-gray-900">
-                  Student Information
-                </CardTitle>
+        <Card className="mt-8 mb-3 border-gray-200 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm">
+          <CardHeader className=" border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2E3094] to-[#4C51BF] flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
               </div>
-              {/* <Badge className="bg-blue-50 text-[#2E3094] border border-blue-200 px-3 py-1">
-                {scheduledExams?.total_assigned_exams ?? 0} exam(s)
-              </Badge> */}
+              <CardTitle className="text-xl font-bold text-gray-900">
+                Student Information
+              </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ">
-              <div className="bg-white rounded-lg p-4 border border-gray-200 ">
-                <div className="text-xs font-medium text-gray-500 mb-1 ">
+          <CardContent className="">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
+                <div className="text-xs font-medium text-gray-500 mb-1">
                   Student ID
                 </div>
-                <div className="text-base font-bold text-gray-900 font-mono">
+                <div className="text-sm font-bold text-gray-900 font-mono">
                   {scheduledExams?.student_info?.f_id || studentData.fId}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Username
                 </div>
-                <div className="text-base font-bold text-gray-900">
+                <div className="text-sm font-bold text-gray-900">
                   {scheduledExams?.student_info?.username ||
                     studentData.username}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-200 ">
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Full Name
                 </div>
-                <div className="text-base font-bold text-gray-900">
+                <div className="text-sm font-bold text-gray-900">
                   {studentData.fullName}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-200 ">
+              <div className="bg-white rounded-lg p-3 border border-gray-200">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Department
                 </div>
-                <div className="text-base font-bold text-gray-900">
+                <div className="text-sm font-bold text-gray-900">
                   {scheduledExams?.student_info?.department_shortname || 'N/A'}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-200 ">
-                <div className="text-xs font-medium text-gray-500 mb-1">
-                  Total Assigned Exams
-                </div>
-                <div className="text-base font-bold text-[#2E3094]">
-                  {scheduledExams?.total_assigned_exams ?? 0}
                 </div>
               </div>
             </div>
@@ -566,16 +553,6 @@ export default function StudentDashboard() {
                         <div className="text-sm">
                           <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-md h-full">
                             <dl className="divide-y divide-gray-100">
-                              {/* Exam ID */}
-                              <div className="flex justify-between items-center px-4 py-3">
-                                <dt className="text-gray-700 font-semibold text-sm">
-                                  Exam ID
-                                </dt>
-                                <dd className="text-gray-900 font-bold text-sm">
-                                  {exam.exam_id}
-                                </dd>
-                              </div>
-
                               {/* Questions */}
                               <div className="flex justify-between items-center px-4 py-3">
                                 <dt className="text-gray-700 font-semibold text-sm">
@@ -697,7 +674,7 @@ export default function StudentDashboard() {
                                 <div className="bg-gradient-to-br from-gray-50 to-blue-50 py-4 px-3">
                                   {(() => {
                                     const date = new Date(
-                                      exam.schedule_details.start_time
+                                      exam.schedule_details.start_time,
                                     );
                                     const day = date.getDate();
                                     const monthNames = [
@@ -732,7 +709,7 @@ export default function StudentDashboard() {
                                           {day} {month} {year}
                                         </div>
                                         <div className="text-base font-extrabold text-gray-800">
-                                          {hoursStr}:{minutes} {ampm}
+                                          {hoursStr}:{minutes}
                                         </div>
                                       </div>
                                     );
@@ -763,7 +740,7 @@ export default function StudentDashboard() {
                                 <div className="bg-gradient-to-br from-gray-50 to-blue-50 py-4 px-3">
                                   {(() => {
                                     const date = new Date(
-                                      exam.schedule_details.end_time
+                                      exam.schedule_details.end_time,
                                     );
                                     const day = date.getDate();
                                     const monthNames = [
@@ -798,7 +775,7 @@ export default function StudentDashboard() {
                                           {day} {month} {year}
                                         </div>
                                         <div className="text-base font-extrabold text-gray-800">
-                                          {hoursStr}:{minutes} {ampm}
+                                          {hoursStr}:{minutes}
                                         </div>
                                       </div>
                                     );
