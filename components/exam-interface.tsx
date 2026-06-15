@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +8,19 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { CircularTimer } from '@/components/circular-timer';
 import Image from 'next/image';
-import { api, timeUtils } from '@/lib/utils';
+import { api } from '@/lib/utils';
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface Question {
   question_id: number;
@@ -148,10 +159,40 @@ export default function ExamInterface() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [totalTime, setTotalTime] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const router = useRouter();
+
+  // Per-question debounce timers for autosaving text answers.
+  const textSaveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>(
+    {}
+  );
+
+  // Restore answers already saved on the server so a student recovers their
+  // work after a reload or a device that switched off mid-exam.
+  const restoreDraftAnswers = async (examId: number, studentId: number) => {
+    try {
+      const data = await api.getDraftAnswers(examId, studentId);
+      const saved = data?.answers;
+      if (Array.isArray(saved) && saved.length > 0) {
+        const restored: Record<number, string> = {};
+        saved.forEach((item: { question_id: number; answer: string }) => {
+          if (item && item.answer != null && String(item.answer).length > 0) {
+            restored[item.question_id] = String(item.answer);
+          }
+        });
+        if (Object.keys(restored).length > 0) {
+          setAnswers(prev => ({ ...restored, ...prev }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to restore draft answers:', err);
+    }
+  };
 
   useEffect(() => {
     const initializeExam = async () => {
@@ -190,6 +231,16 @@ export default function ExamInterface() {
                 Math.floor((endTime - now) / 1000)
               );
               setTimeLeft(timeLeftSeconds);
+              const startTime = new Date(activeExam.start_time).getTime();
+              const totalSeconds = Math.max(
+                1,
+                Math.floor((endTime - startTime) / 1000)
+              );
+              setTotalTime(totalSeconds);
+              await restoreDraftAnswers(
+                presentedExamQuestions.exam_id,
+                student.studentId
+              );
               const uniqueSubjects = [
                 ...new Set(
                   presentedExamQuestions.questions.map(
@@ -229,6 +280,13 @@ export default function ExamInterface() {
           examQuestions.exam_details?.duration_minutes || 120;
         const timeLeftSeconds = defaultDurationMinutes * 60;
         setTimeLeft(timeLeftSeconds);
+        setTotalTime(timeLeftSeconds);
+
+        // Restore any answers already saved on the server (recovery).
+        await restoreDraftAnswers(
+          presentedExamQuestions.exam_id,
+          student.studentId
+        );
 
         // Group questions by subject
         const uniqueSubjects = [
@@ -259,11 +317,50 @@ export default function ExamInterface() {
     }
   }, [timeLeft, examData]);
 
+  const persistAnswer = async (questionId: number, answer: string) => {
+    if (!examData || !studentData) return;
+
+    setSaveStatus('saving');
+    try {
+      await api.saveAnswer(
+        examData.exam_id,
+        studentData.studentId,
+        questionId,
+        answer
+      );
+      setSaveStatus('saved');
+    } catch (err) {
+      console.error('Failed to autosave answer:', err);
+      // Keep the answer in state; final submit is the backstop and the next
+      // change will retry the save.
+      setSaveStatus('error');
+    }
+  };
+
   const handleAnswerChange = (questionId: number, answer: string) => {
     setAnswers(prev => ({
       ...prev,
       [questionId]: answer,
     }));
+
+    const question = examData?.questions.find(
+      q => q.question_id === questionId
+    );
+    const isTextAnswer = question?.question_type === 'text';
+
+    if (isTextAnswer) {
+      // Debounce text answers so we don't fire a request per keystroke.
+      if (textSaveTimers.current[questionId]) {
+        clearTimeout(textSaveTimers.current[questionId]);
+      }
+      textSaveTimers.current[questionId] = setTimeout(() => {
+        delete textSaveTimers.current[questionId];
+        void persistAnswer(questionId, answer);
+      }, 800);
+    } else {
+      // Option answers save immediately.
+      void persistAnswer(questionId, answer);
+    }
   };
 
   const handleLogout = () => {
@@ -276,6 +373,7 @@ export default function ExamInterface() {
   const handleSubmitExam = async () => {
     if (!examData || !studentData) return;
 
+    setShowSubmitDialog(false);
     setSubmitting(true);
 
     try {
@@ -382,254 +480,74 @@ export default function ExamInterface() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-3 md:p-4 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto">
-          {/* Mobile Header */}
-          <div className="flex flex-col gap-3 md:hidden">
-            {/* Top Row: Logo and Logout */}
-            <div className="flex items-center justify-between">
-              <Image
-                src="/assets/img/diu-logo2.png"
-                alt="Daffodil International University"
-                width={80}
-                height={80}
-                className="h-10 w-auto"
-              />
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200"
-                title="Logout"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 17L21 12L16 7"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M21 12H9"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* University & Exam Info */}
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-gray-900">
+      <div className="bg-white border-b border-gray-200 px-3 py-2 md:px-4 md:py-3 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          {/* Left: Logo + University Info */}
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
+            <Image
+              src="/assets/img/diu-logo2.png"
+              alt="Daffodil International University"
+              width={100}
+              height={100}
+              className="h-9 w-auto flex-shrink-0 md:h-16"
+            />
+            <div className="min-w-0">
+              <h1 className="text-sm md:text-2xl font-bold text-black leading-tight truncate">
                 Daffodil International University
+              </h1>
+              <p className="text-[11px] md:text-base font-semibold text-gray-700 leading-tight truncate">
+                Faculty of Science &amp; Information Technology
               </p>
-              <p className="text-xs text-gray-600">
-                Faculty of Science & Information Technology
-              </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-[11px] md:text-base font-semibold text-gray-700 leading-tight truncate">
                 {examData.exam_details.semester}
               </p>
             </div>
-
-            {/* Student Info & Timer */}
-            <div className="rounded-2xl border border-blue-100 bg-white/80 p-4 shadow-sm">
-              <div className="space-y-3 text-left">
-                <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-gray-900">
-                    Student&apos;s Name:{' '}
-                    <span className="font-normal text-gray-700">
-                      {studentData?.fullName || 'N/A'}
-                    </span>
-                  </p>
-
-                  <p className="text-sm font-semibold text-gray-900">
-                    Serial No:{' '}
-                    <span className="font-normal text-gray-700">
-                      {studentData?.fId || 'N/A'}
-                    </span>
-                  </p>
-
-                  <p className="text-sm font-semibold text-gray-900">
-                    Department:{' '}
-                    <span className="font-normal text-gray-700">
-                      {examData?.exam_details?.department || 'N/A'}
-                    </span>
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-center rounded-xl border border-[#2E3094] bg-[#2E3094]/5 p-2 text-center">
-                  <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-[#2E3094]/50 bg-white">
-                    <svg
-                      className="h-5 w-5 text-[#2E3094]"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M12 8v4l2.5 1.5"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="8"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-[#2E3094]/80">
-                    Time Left
-                  </p>
-                  <div className="mt-1 text-xl font-semibold text-[#2E3094] font-mono">
-                    {timeUtils.formatTime(timeLeft)}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
-          {/* Desktop Header */}
-          <div className="hidden md:flex justify-between items-center gap-8 py-2">
-            {/* Left Side: Logo + University Info */}
-            <div className="flex flex-col justify-between flex-1">
-              <div className="flex items-center gap-4">
-                <Image
-                  src="/assets/img/diu-logo2.png"
-                  alt="Daffodil International University"
-                  width={100}
-                  height={100}
-                  className="h-20 w-auto flex-shrink-0"
-                />
-                <div className="space-y-0">
-                  <h1 className="text-2xl font-bold text-black leading-tight mb-1">
-                    Daffodil International University
-                  </h1>
-                  <p className="text-base font-semibold text-black leading-tight">
-                    Faculty of Science and Information Technology
-                  </p>
-                  <p className="text-base font-semibold text-black leading-tight">
-                    {examData.exam_details.semester}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Side: Student Info + Timer + Logout */}
-            <div className="flex items-center gap-6">
-              <div className="space-y-1.5 text-left">
-                <p className="text-base font-semibold text-black">
-                  Student&apos;s Name:{' '}
-                  <span className="font-normal">
-                    {studentData?.fullName || 'Student'}
-                  </span>
-                </p>
-                <p className="text-base font-semibold text-black">
-                  Serial No:{' '}
-                  <span className="font-normal">
-                    {studentData?.fId || 'N/A'}
-                  </span>
-                </p>
-                <p className="text-base font-semibold text-black">
-                  Department:{' '}
-                  <span className="font-normal">
-                    {examData.exam_details.department}
-                  </span>
-                </p>
-              </div>
-
-              <div className="h-16 w-px bg-gray-300"></div>
-
-              <div className="flex flex-col items-center rounded-xl border border-[#2E3094] bg-[#2E3094]/5 px-4 py-3 text-center shadow-sm">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-[#2E3094]/50 bg-white">
-                  <svg
-                    className="h-5 w-5 text-[#2E3094]"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 8v4l2.5 1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="8"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                  </svg>
-                </div>
-                <p className="text-xs font-medium uppercase tracking-wide text-[#2E3094]/80">
-                  Time Left
-                </p>
-                <div className="mt-1 text-2xl font-semibold text-[#2E3094] font-mono">
-                  {timeUtils.formatTime(timeLeft)}
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200"
-                title="Logout"
+          {/* Right: Timer + Logout */}
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={60} />
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200"
+              title="Logout"
+              aria-label="Logout"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 17L21 12L16 7"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M21 12H9"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            </div>
+                <path
+                  d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M16 17L21 12L16 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M21 12H9"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="max-w-7xl mx-auto p-3 md:p-4">
         <div className="mb-6">
           <Card className="border-gray-200 bg-white">
             <CardHeader>
@@ -712,7 +630,7 @@ export default function ExamInterface() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-8">
+          <CardContent className="space-y-4 md:space-y-5">
             {currentSubjectQuestions.map((question, index) => {
               const globalIndex =
                 examData?.questions.findIndex(
@@ -721,16 +639,16 @@ export default function ExamInterface() {
               return (
                 <div
                   key={question.question_id}
-                  className="space-y-4 p-4 border border-gray-100 rounded-lg"
+                  className="space-y-3 p-3 border border-gray-100 rounded-lg"
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-3">
-                        <span className="inline-block w-8 h-8 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white rounded-full text-center leading-8 text-sm font-bold flex-shrink-0">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 md:gap-3">
+                        <span className="inline-block w-6 h-6 md:w-7 md:h-7 bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white rounded-full text-center leading-6 md:leading-7 text-xs md:text-sm font-bold flex-shrink-0">
                           {globalIndex + 1}
                         </span>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-black">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm md:text-base font-semibold text-black break-words">
                             {question.question_text}
                           </h3>
                           {currentSubject === 'All' && (
@@ -753,7 +671,7 @@ export default function ExamInterface() {
                   </div>
 
                   {question.question_type === 'option' ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2 md:space-y-2.5">
                       {(
                         question.displayOptions ||
                         getDisplayOptions(
@@ -768,7 +686,7 @@ export default function ExamInterface() {
                           return (
                             <div
                               key={option.originalKey}
-                              className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-[#2E3094]/10 hover:to-[#4C51BF]/10 ${
+                              className={`flex items-center space-x-3 p-2.5 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:bg-gradient-to-r hover:from-[#2E3094]/10 hover:to-[#4C51BF]/10 ${
                                 isSelected
                                   ? 'border-[#2E3094] bg-gradient-to-r from-[#2E3094]/20 to-[#4C51BF]/20 shadow-md'
                                   : 'border-gray-200 hover:border-[#2E3094]'
@@ -792,7 +710,7 @@ export default function ExamInterface() {
                                 )}
                               </div>
                               <Label
-                                className={`cursor-pointer flex-1 text-base ${
+                                className={`cursor-pointer flex-1 text-sm md:text-base break-words ${
                                   isSelected
                                     ? 'text-blue-900 font-medium'
                                     : 'text-gray-700'
@@ -846,7 +764,7 @@ export default function ExamInterface() {
                 </Alert>
               )}
               <Button
-                onClick={handleSubmitExam}
+                onClick={() => setShowSubmitDialog(true)}
                 disabled={submitting}
                 size="lg"
                 className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white px-12 py-3 text-lg disabled:opacity-50"
@@ -880,13 +798,98 @@ export default function ExamInterface() {
                 )}
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                Answered: {Object.keys(answers).length} /{' '}
+                Answered: {getTotalAnsweredCount()} /{' '}
                 {examData.exam_details.total_questions} questions
+              </p>
+              <p className="text-xs mt-1 h-4">
+                {saveStatus === 'saving' && (
+                  <span className="text-gray-500">Saving…</span>
+                )}
+                {saveStatus === 'saved' && (
+                  <span className="text-green-600">
+                    All answers saved to server
+                  </span>
+                )}
+                {saveStatus === 'error' && (
+                  <span className="text-red-600">
+                    Couldn&apos;t save last answer — it will retry automatically
+                  </span>
+                )}
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Submit confirmation dialog */}
+      <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit your exam?</DialogTitle>
+            <DialogDescription>
+              Please review before submitting. You can&apos;t change your
+              answers after submitting.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xl font-bold text-gray-900">
+                {examData.exam_details.total_questions}
+              </p>
+            </div>
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+              <p className="text-xs text-gray-500">Answered</p>
+              <p className="text-xl font-bold text-green-600">
+                {getTotalAnsweredCount()}
+              </p>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs text-gray-500">Left</p>
+              <p className="text-xl font-bold text-amber-600">
+                {Math.max(
+                  0,
+                  examData.exam_details.total_questions -
+                    getTotalAnsweredCount()
+                )}
+              </p>
+            </div>
+          </div>
+
+          {examData.exam_details.total_questions - getTotalAnsweredCount() >
+            0 && (
+            <p className="text-sm text-amber-700">
+              You still have{' '}
+              {examData.exam_details.total_questions - getTotalAnsweredCount()}{' '}
+              unanswered question
+              {examData.exam_details.total_questions -
+                getTotalAnsweredCount() !==
+              1
+                ? 's'
+                : ''}
+              .
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSubmitDialog(false)}
+              disabled={submitting}
+            >
+              Keep Answering
+            </Button>
+            <Button
+              onClick={handleSubmitExam}
+              disabled={submitting}
+              className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white"
+            >
+              {submitting ? 'Submitting…' : 'Confirm Submit'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

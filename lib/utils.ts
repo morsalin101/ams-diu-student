@@ -91,6 +91,55 @@ export const api = {
     return response.json();
   },
 
+  // Autosave a single answer as a draft (server-side persistence)
+  saveAnswer: async (
+    examId: number,
+    studentId: number,
+    questionId: number,
+    answer: string
+  ) => {
+    const response = await fetch(
+      `${API_BASE_URL}/student/exam/${examId}/save-answer/`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          student_id: studentId,
+          question_id: questionId,
+          answer: answer,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to save answer');
+    }
+
+    return response.json();
+  },
+
+  // Get previously saved draft answers (for recovery after reload/device failure)
+  getDraftAnswers: async (examId: number, studentId: number) => {
+    const response = await fetch(
+      `${API_BASE_URL}/student/exam/${examId}/draft/${studentId}/`,
+      {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch draft answers');
+    }
+
+    return response.json();
+  },
+
   // Get exam results
   getExamResult: async (examId: number, studentId: number) => {
     const response = await fetch(
