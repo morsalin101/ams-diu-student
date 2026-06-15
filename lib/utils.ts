@@ -85,7 +85,10 @@ export const api = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to submit exam');
+      const errorData = await response.json().catch(() => null);
+      throw new Error(
+        errorData?.error || 'Failed to submit exam. Please try again.'
+      );
     }
 
     return response.json();

@@ -573,12 +573,24 @@ export default function StudentDashboard() {
                                 </dd>
                               </div>
                               {/* Duration */}
-                              <div className="flex justify-between items-center px-4 py-3">
+                              {/* <div className="flex justify-between items-center px-4 py-3">
                                 <dt className="text-gray-700 font-semibold text-sm">
                                   Duration
                                 </dt>
                                 <dd className="text-gray-900 font-bold text-sm">
                                   {exam.exam_details.duration_minutes} min
+                                </dd>
+                              </div> */}
+
+                              <div className="flex justify-between items-center px-4 py-3">
+                                <dt className="text-gray-700 font-semibold text-sm">
+                                  Duration
+                                </dt>
+                                <dd className="text-gray-900 font-bold text-sm">
+                                  {Math.floor(
+                                    exam.exam_details.duration_minutes / 60,
+                                  )}
+                                  h {exam.exam_details.duration_minutes % 60}m
                                 </dd>
                               </div>
 
