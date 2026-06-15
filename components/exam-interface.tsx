@@ -86,6 +86,17 @@ const getSeededShuffle = <T,>(items: T[], seedInput: string) => {
   return shuffledItems;
 };
 
+const getExamDraftKey = (studentId: number, examId: number) =>
+  `examDraft:${studentId}:${examId}`;
+
+const getExamSubmittedKey = (studentId: number, examId: number) =>
+  `examSubmitted:${studentId}:${examId}`;
+
+const getSubmittedAnswers = (answers: Record<number, string>) =>
+  Object.fromEntries(
+    Object.entries(answers).filter(([, answer]) => answer.trim().length > 0)
+  );
+
 const getDisplayOptions = (
   question: Question,
   studentId: number,
@@ -150,6 +161,7 @@ export default function ExamInterface() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -165,6 +177,40 @@ export default function ExamInterface() {
       const student = JSON.parse(studentDataStr);
       setStudentData(student);
 
+      const loadExam = (examQuestions: ExamData) => {
+        const presentedExamQuestions = applyExamPresentationShuffle(
+          examQuestions,
+          student.studentId
+        );
+        setExamData(presentedExamQuestions);
+
+        const submittedKey = getExamSubmittedKey(
+          student.studentId,
+          presentedExamQuestions.exam_id
+        );
+        const isSubmitted = localStorage.getItem(submittedKey) === 'true';
+
+        if (!isSubmitted) {
+          const draftKey = getExamDraftKey(
+            student.studentId,
+            presentedExamQuestions.exam_id
+          );
+          const savedDraft = localStorage.getItem(draftKey);
+
+          if (savedDraft) {
+            try {
+              const parsedDraft = JSON.parse(savedDraft);
+              setAnswers(parsedDraft.answers || {});
+            } catch (error) {
+              console.error('Failed to restore exam draft:', error);
+              localStorage.removeItem(draftKey);
+            }
+          }
+        }
+
+        return presentedExamQuestions;
+      };
+
       // Get selected exam ID from dashboard
       const selectedExamIdStr = localStorage.getItem('selectedExamId');
       if (!selectedExamIdStr) {
@@ -178,11 +224,7 @@ export default function ExamInterface() {
           if (activeExam) {
             try {
               const examQuestions = await api.getExamQuestions(activeExam.exam);
-              const presentedExamQuestions = applyExamPresentationShuffle(
-                examQuestions,
-                student.studentId
-              );
-              setExamData(presentedExamQuestions);
+              const presentedExamQuestions = loadExam(examQuestions);
               const endTime = new Date(activeExam.end_time).getTime();
               const now = new Date().getTime();
               const timeLeftSeconds = Math.max(
@@ -217,11 +259,7 @@ export default function ExamInterface() {
       try {
         // Fetch exam questions for the selected exam
         const examQuestions = await api.getExamQuestions(selectedExamId);
-        const presentedExamQuestions = applyExamPresentationShuffle(
-          examQuestions,
-          student.studentId
-        );
-        setExamData(presentedExamQuestions);
+        const presentedExamQuestions = loadExam(examQuestions);
 
         // For now, set a default duration if not provided in the API response
         // You might want to get this from the student scheduled exams API
@@ -260,10 +298,29 @@ export default function ExamInterface() {
   }, [timeLeft, examData]);
 
   const handleAnswerChange = (questionId: number, answer: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer,
-    }));
+    if (!examData || !studentData) return;
+
+    setAnswers(prev => {
+      const nextAnswers = { ...prev };
+
+      if (answer.trim().length > 0) {
+        nextAnswers[questionId] = answer;
+      } else {
+        delete nextAnswers[questionId];
+      }
+
+      localStorage.setItem(
+        getExamDraftKey(studentData.studentId, examData.exam_id),
+        JSON.stringify({
+          examId: examData.exam_id,
+          studentId: studentData.studentId,
+          answers: nextAnswers,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+
+      return nextAnswers;
+    });
   };
 
   const handleLogout = () => {
@@ -273,14 +330,33 @@ export default function ExamInterface() {
     router.push('/');
   };
 
+  const handleSubmitClick = () => {
+    if (Object.keys(getSubmittedAnswers(answers)).length === 0) {
+      setError('Please answer at least one question before submitting.');
+      return;
+    }
+
+    setError('');
+    setShowSubmitConfirm(true);
+  };
+
   const handleSubmitExam = async () => {
     if (!examData || !studentData) return;
 
+    const submittedAnswers = getSubmittedAnswers(answers);
+
+    if (Object.keys(submittedAnswers).length === 0) {
+      setShowSubmitConfirm(false);
+      setError('Please answer at least one question before submitting.');
+      return;
+    }
+
+    setShowSubmitConfirm(false);
     setSubmitting(true);
 
     try {
       // Prepare submissions array
-      const submissions = Object.entries(answers).map(
+      const submissions = Object.entries(submittedAnswers).map(
         ([questionId, answer]) => ({
           question_id: parseInt(questionId),
           answer: answer,
@@ -301,15 +377,26 @@ export default function ExamInterface() {
           examId: examData.exam_id,
           totalSubmitted: result.total_submitted,
           message: result.message,
-          answers: answers,
+          answers: submittedAnswers,
           submittedAt: new Date().toISOString(),
         })
+      );
+      localStorage.removeItem(
+        getExamDraftKey(studentData.studentId, examData.exam_id)
+      );
+      localStorage.setItem(
+        getExamSubmittedKey(studentData.studentId, examData.exam_id),
+        'true'
       );
 
       router.push('/results');
     } catch (error) {
       console.error('Failed to submit exam:', error);
-      setError('Failed to submit exam. Please try again.');
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to submit exam. Please try again.'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -846,7 +933,7 @@ export default function ExamInterface() {
                 </Alert>
               )}
               <Button
-                onClick={handleSubmitExam}
+                onClick={handleSubmitClick}
                 disabled={submitting}
                 size="lg"
                 className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white px-12 py-3 text-lg disabled:opacity-50"
@@ -880,13 +967,48 @@ export default function ExamInterface() {
                 )}
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                Answered: {Object.keys(answers).length} /{' '}
+                Answered: {Object.keys(getSubmittedAnswers(answers)).length} /{' '}
                 {examData.exam_details.total_questions} questions
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-md border-gray-200 bg-white shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Submit Exam?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <p className="text-sm leading-6 text-gray-700">
+                Are you sure you want to submit? You will not be able to change
+                your answers after submission.
+              </p>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowSubmitConfirm(false)}
+                  disabled={submitting}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSubmitExam}
+                  disabled={submitting}
+                  className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white disabled:opacity-50"
+                >
+                  {submitting ? 'Submitting...' : 'Yes, Submit'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
