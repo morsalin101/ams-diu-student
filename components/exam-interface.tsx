@@ -175,7 +175,6 @@ export default function ExamInterface() {
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [error, setError] = useState('');
-  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const router = useRouter();
 
@@ -423,6 +422,7 @@ export default function ExamInterface() {
   const handleSubmitExam = async () => {
     if (!examData || !studentData) return;
 
+    setShowSubmitConfirm(false);
     setSubmitting(true);
 
     const submittedAnswers = getSubmittedAnswers(answers);
@@ -826,7 +826,7 @@ export default function ExamInterface() {
                 </Alert>
               )}
               <Button
-                onClick={handleSubmitExam}
+                onClick={handleSubmitClick}
                 disabled={submitting}
                 size="lg"
                 className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white px-12 py-3 text-lg disabled:opacity-50"
@@ -882,6 +882,78 @@ export default function ExamInterface() {
           </Card>
         </div>
       </div>
+
+      {/* Submit confirmation dialog */}
+      <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit your exam?</DialogTitle>
+            <DialogDescription>
+              Review your submission overview below. You can&apos;t change your
+              answers after submitting.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xl font-bold text-gray-900">
+                {examData.exam_details.total_questions}
+              </p>
+            </div>
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+              <p className="text-xs text-gray-500">Answered</p>
+              <p className="text-xl font-bold text-green-600">
+                {Object.keys(getSubmittedAnswers(answers)).length}
+              </p>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs text-gray-500">Missing</p>
+              <p className="text-xl font-bold text-amber-600">
+                {Math.max(
+                  0,
+                  examData.exam_details.total_questions -
+                    Object.keys(getSubmittedAnswers(answers)).length
+                )}
+              </p>
+            </div>
+          </div>
+
+          {examData.exam_details.total_questions -
+            Object.keys(getSubmittedAnswers(answers)).length >
+            0 && (
+            <p className="text-sm text-amber-700">
+              You still have{' '}
+              {examData.exam_details.total_questions -
+                Object.keys(getSubmittedAnswers(answers)).length}{' '}
+              unanswered question
+              {examData.exam_details.total_questions -
+                Object.keys(getSubmittedAnswers(answers)).length !==
+              1
+                ? 's'
+                : ''}
+              . They will be left blank.
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSubmitConfirm(false)}
+              disabled={submitting}
+            >
+              Keep Answering
+            </Button>
+            <Button
+              onClick={handleSubmitExam}
+              disabled={submitting}
+              className="bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white"
+            >
+              {submitting ? 'Submitting…' : 'Confirm Submit'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
