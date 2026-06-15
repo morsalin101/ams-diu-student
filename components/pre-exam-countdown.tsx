@@ -129,20 +129,20 @@ export default function PreExamCountdown() {
     <div className="min-h-screen bg-white p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-8">
-          <div className="flex-1 text-center">
+        <div className="flex justify-between items-start gap-2 mb-6 md:mb-8">
+          <div className="flex-1 min-w-0 text-center">
             <div className="flex justify-center mb-4">
               <Image
                 src="/images/diu-logo.png"
                 alt="Daffodil International University"
                 width={400}
                 height={120}
-                className="h-20 w-auto"
+                className="h-14 md:h-20 w-auto"
               />
             </div>
-            <h2 className="text-2xl font-semibold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent mb-4">Admission Test, Summer 2026</h2>
+            <h2 className="text-lg md:text-2xl font-semibold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent mb-4">Admission Test, Summer 2026</h2>
           </div>
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 flex-shrink-0">
             <Button
               onClick={() => router.push("/dashboard")}
               variant="outline"
@@ -284,7 +284,7 @@ export default function PreExamCountdown() {
               </>
             ) : examEnded ? (
               <>
-                <div className="text-4xl font-bold text-red-600 mb-4">Exam Has Ended</div>
+                <div className="text-2xl md:text-4xl font-bold text-red-600 mb-4">Exam Has Ended</div>
                 <p className="text-gray-600">The exam period has concluded. Please check your results.</p>
                 <Button
                   onClick={() => router.push("/results")}
@@ -296,7 +296,7 @@ export default function PreExamCountdown() {
               </>
             ) : examStarted ? (
               <>
-                <div className="text-4xl font-bold text-green-600 mb-4">Exam is Live!</div>
+                <div className="text-2xl md:text-4xl font-bold text-green-600 mb-4">Exam is Live!</div>
                 <p className="text-gray-600 mb-6">You can now start your admission test</p>
                 <Button
                   onClick={handleStartExam}
@@ -308,7 +308,7 @@ export default function PreExamCountdown() {
               </>
             ) : (
               <>
-                <div className="text-6xl font-bold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent font-mono">{timeUtils.formatTime(timeLeft)}</div>
+                <div className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-[#2E3094] to-[#4C51BF] bg-clip-text text-transparent font-mono break-all">{timeUtils.formatTime(timeLeft)}</div>
                 <p className="text-gray-600">Please wait for the countdown to finish</p>
                 <div className="mt-4 p-4 bg-gradient-to-r from-[#2E3094]/10 to-[#4C51BF]/10 rounded-lg">
                   <p className="text-sm text-[#2E3094]">

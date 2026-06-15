@@ -307,30 +307,30 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 md:px-12 py-8">
+    <div className="min-h-screen bg-gray-50 px-3 sm:px-6 md:px-12 py-4 md:py-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className=" flex items-center justify-between mb-4 flex-wrap gap-8">
-          <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3 md:gap-8">
+          <div className="flex items-center gap-3 md:gap-6 min-w-0">
             <div className="flex-shrink-0">
               <Image
                 src="/images/diu-logo.png"
                 alt="Daffodil International University"
                 width={200}
                 height={60}
-                className="h-20 w-auto"
+                className="h-12 md:h-20 w-auto"
               />
             </div>
-            <div className="border-l-4 border-[#2E3094] pl-4">
-              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+            <div className="border-l-4 border-[#2E3094] pl-3 md:pl-4 min-w-0">
+              <h2 className="text-lg md:text-2xl font-bold text-gray-900 tracking-tight">
                 Student Dashboard
               </h2>
-              <p className="text-sm text-gray-600 font-medium">
+              <p className="text-xs md:text-sm text-gray-600 font-medium">
                 Scheduled Exams Management
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {/* <Button
               onClick={() => router.push('/pre-exam')}
               variant="outline"
@@ -342,7 +342,7 @@ export default function StudentDashboard() {
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-white border-2 border-gray-200 hover:bg-blue-900/10 transition-all duration-300 shadow-sm hover:shadow-md group"
+              className="flex items-center gap-2.5 px-3 py-2 md:px-5 md:py-2.5 rounded-lg bg-white border-2 border-gray-200 hover:bg-blue-900/10 transition-all duration-300 shadow-sm hover:shadow-md group"
               title="Logout"
               aria-label="Logout"
             >
@@ -353,7 +353,7 @@ export default function StudentDashboard() {
                 height={20}
                 className="w-5 h-5 group-hover:scale-110 transition-transform duration-200"
               />
-              <span className="text-gray-700 group-hover:text-blue-900 font-semibold text-sm transition-colors duration-200">
+              <span className="hidden sm:inline text-gray-700 group-hover:text-blue-900 font-semibold text-sm transition-colors duration-200">
                 Logout
               </span>
             </button>
@@ -361,12 +361,12 @@ export default function StudentDashboard() {
         </div>
 
         {/* Student Information */}
-        <Card className="mt-8 mb-3 border-gray-200 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm">
+        <Card className="mt-4 md:mt-8 mb-3 border-gray-200 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm">
           <CardHeader className=" border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2E3094] to-[#4C51BF] flex items-center justify-center">
+              <div className="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-[#2E3094] to-[#4C51BF] flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-5 h-5 md:w-6 md:h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -379,43 +379,43 @@ export default function StudentDashboard() {
                   />
                 </svg>
               </div>
-              <CardTitle className="text-xl font-bold text-gray-900">
+              <CardTitle className="text-base md:text-xl font-bold text-gray-900">
                 Student Information
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent className="">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-white rounded-lg p-3 border border-gray-200 min-w-0">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Student ID
                 </div>
-                <div className="text-sm font-bold text-gray-900 font-mono">
+                <div className="text-sm font-bold text-gray-900 font-mono break-words">
                   {scheduledExams?.student_info?.f_id || studentData.fId}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-white rounded-lg p-3 border border-gray-200 min-w-0">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Username
                 </div>
-                <div className="text-sm font-bold text-gray-900">
+                <div className="text-sm font-bold text-gray-900 break-words">
                   {scheduledExams?.student_info?.username ||
                     studentData.username}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-white rounded-lg p-3 border border-gray-200 min-w-0">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Full Name
                 </div>
-                <div className="text-sm font-bold text-gray-900">
+                <div className="text-sm font-bold text-gray-900 break-words">
                   {studentData.fullName}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border border-gray-200">
+              <div className="bg-white rounded-lg p-3 border border-gray-200 min-w-0">
                 <div className="text-xs font-medium text-gray-500 mb-1">
                   Department
                 </div>
-                <div className="text-sm font-bold text-gray-900">
+                <div className="text-sm font-bold text-gray-900 break-words">
                   {scheduledExams?.student_info?.department_shortname || 'N/A'}
                 </div>
               </div>
@@ -427,22 +427,22 @@ export default function StudentDashboard() {
         {/* =========== START: MODIFIED SCHEDULED EXAMS SECTION ============ */}
         {/* ================================================================== */}
 
-        <div className="space-y-6 pt-5">
+        <div className="space-y-4 md:space-y-6 pt-5">
           {/* Section Header from Image */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <Image
                 src="/ScheduleIcon.png"
                 alt="Schedule"
                 width={32}
                 height={32}
-                className="w-6 h-6"
+                className="w-6 h-6 flex-shrink-0"
               />
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-900">
                 Your Scheduled Exams
               </h3>
             </div>
-            <Badge className="bg-blue-50 text-[#2E3094] border border-blue-200 font-medium px-3 py-1.5 rounded-full tracking-wide">
+            <Badge className="bg-blue-50 text-[#2E3094] border border-blue-200 font-medium px-3 py-1.5 rounded-full tracking-wide flex-shrink-0">
               {scheduledExams?.total_assigned_exams ?? 0}{' '}
               {scheduledExams?.total_assigned_exams === 1 ? 'Exam' : 'Exams'}
             </Badge>
@@ -452,7 +452,7 @@ export default function StudentDashboard() {
           {!scheduledExams?.scheduled_exams?.length ? (
             // NEW: Empty State UI from Image
             <Card className="border-gray-200 bg-white">
-              <CardContent className="py-20 text-center">
+              <CardContent className="py-12 md:py-20 text-center">
                 <div className="max-w-md mx-auto">
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
                     <svg
@@ -487,7 +487,7 @@ export default function StudentDashboard() {
                     Check back later or contact your administrator if you
                     believe this is an error.
                   </p>
-                  <div className="mt-8 flex justify-center gap-3">
+                  <div className="mt-8 flex flex-wrap justify-center gap-3">
                     <Button
                       onClick={refreshSchedule}
                       disabled={refreshing}
@@ -535,20 +535,20 @@ export default function StudentDashboard() {
                     className="w-full border-gray-200 bg-white rounded-xl shadow-sm  transform  transition-all"
                   >
                     <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-xl font-bold text-gray-900">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <CardTitle className="text-base md:text-xl font-bold text-gray-900 break-words">
                             {exam.exam_details.department}
                           </CardTitle>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-xs md:text-sm text-gray-600">
                             {exam.exam_details.semester}
                           </p>
                         </div>
-                        {getExamStatusBadge(exam)}
+                        <div className="flex-shrink-0">{getExamStatusBadge(exam)}</div>
                       </div>
                     </CardHeader>
                     <CardContent className="w-full">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         {/* Left: Exam details (50% width on md+) */}
                         <div className="text-sm">
                           <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-md h-full">
@@ -660,9 +660,9 @@ export default function StudentDashboard() {
 
                         {/* Right: Schedule and actions (50% width on md+) */}
                         <div className="text-sm">
-                          <div className="space-y-4 h-full flex flex-col p-4">
+                          <div className="space-y-4 h-full flex flex-col p-2 md:p-4">
                             {/* Time Cards in 2 columns */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3 md:gap-4">
                               {/* Start Time Card */}
                               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-blue-100">
                                 <div className="bg-gradient-to-br from-[#2E3094] to-[#4C51BF] flex items-center justify-center gap-2 py-3 px-3">
@@ -880,7 +880,7 @@ export default function StudentDashboard() {
                                       <p className="text-gray-600 text-xs font-semibold mb-2">
                                         Starts in
                                       </p>
-                                      <div className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent font-mono">
+                                      <div className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent font-mono">
                                         {timeUtils.formatTime(timer.timeLeft)}
                                       </div>
                                     </div>

@@ -62,14 +62,14 @@ export default function LoginForm() {
 
   return (
     <Card className="w-full gap-0 bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden pb-0">
-      <CardHeader className="bg-white text-center p-8 pb-0 border-b border-gray-100">
+      <CardHeader className="bg-white text-center p-6 md:p-8 pb-0 border-b border-gray-100">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-wide">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-wide">
             Admission Test Portal
           </h1>
         </div>
       </CardHeader>
-      <CardContent className="p-8 pt-0">
+      <CardContent className="p-6 md:p-8 pt-0">
         {error && (
           <Alert className="border-blue-200 bg-blue-50 mb-6">
             <AlertDescription className="text-gray-800 flex items-center text-sm">

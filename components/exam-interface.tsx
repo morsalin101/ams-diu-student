@@ -380,6 +380,27 @@ export default function ExamInterface() {
       ...prev,
       [questionId]: answer,
     }));
+
+    // Immediately persist the answer to the server as a draft so the student
+    // can rejoin (after a reload / dead device) and keep their submission.
+    const question = examData?.questions.find(
+      q => q.question_id === questionId
+    );
+    const isTextAnswer = question?.question_type === 'text';
+
+    if (isTextAnswer) {
+      // Debounce text answers so we don't fire a request per keystroke.
+      if (textSaveTimers.current[questionId]) {
+        clearTimeout(textSaveTimers.current[questionId]);
+      }
+      textSaveTimers.current[questionId] = setTimeout(() => {
+        delete textSaveTimers.current[questionId];
+        void persistAnswer(questionId, answer);
+      }, 800);
+    } else {
+      // Option answers save immediately on click.
+      void persistAnswer(questionId, answer);
+    }
   };
 
   const handleLogout = () => {
@@ -403,6 +424,8 @@ export default function ExamInterface() {
     if (!examData || !studentData) return;
 
     setSubmitting(true);
+
+    const submittedAnswers = getSubmittedAnswers(answers);
 
     try {
       // Prepare submissions array
@@ -545,7 +568,7 @@ export default function ExamInterface() {
 
           {/* Right: Timer + Logout */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={60} />
+            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={76} />
             <button
               onClick={handleLogout}
               className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200"

@@ -289,17 +289,17 @@ export default function ExamResults() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-white border-b-2 border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        <div className="bg-white border-b-2 border-gray-200 p-4 md:p-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 mb-1 break-words">
                 Daffodil International University
               </h1>
-              <p className="text-sm text-gray-600">Admission Test Results</p>
+              <p className="text-xs md:text-sm text-gray-600">Admission Test Results</p>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg bg-white border-2 border-gray-200 hover:bg-blue-900/10 transition-all duration-300 shadow-sm hover:shadow-md group"
+              className="flex items-center gap-2.5 px-3 py-2 md:px-5 md:py-2.5 rounded-lg bg-white border-2 border-gray-200 hover:bg-blue-900/10 transition-all duration-300 shadow-sm hover:shadow-md group flex-shrink-0"
               title="Logout"
               aria-label="Logout"
             >
@@ -310,7 +310,7 @@ export default function ExamResults() {
                 height={20}
                 className="w-5 h-5 group-hover:scale-110 transition-transform duration-200"
               />
-              <span className="text-gray-700 group-hover:text-blue-900 font-semibold text-sm transition-colors duration-200">
+              <span className="hidden sm:inline text-gray-700 group-hover:text-blue-900 font-semibold text-sm transition-colors duration-200">
                 Logout
               </span>
             </button>
@@ -361,9 +361,9 @@ export default function ExamResults() {
                 </svg>
               )}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h2
-                className={`text-2xl font-bold mb-1 ${
+                className={`text-lg md:text-2xl font-bold mb-1 ${
                   passStatus === 'PASSED' ? 'text-green-800' : 'text-red-800'
                 }`}
               >
