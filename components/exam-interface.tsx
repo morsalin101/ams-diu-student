@@ -623,7 +623,7 @@ export default function ExamInterface() {
 
           {/* Right: Timer + Logout */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={76} />
+            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={88} />
             <button
               onClick={handleLogout}
               className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200"
