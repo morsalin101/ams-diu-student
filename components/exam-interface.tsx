@@ -97,6 +97,21 @@ const getSeededShuffle = <T,>(items: T[], seedInput: string) => {
   return shuffledItems;
 };
 
+// Deadline = scheduled end, but never longer than the allotted duration.
+const getExamWindow = (s: {
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+}) => {
+  const start = new Date(s.start_time).getTime();
+  const end = new Date(s.end_time).getTime();
+  const deadline = Math.min(start + s.duration_minutes * 60_000, end);
+  return {
+    deadline,
+    totalSeconds: Math.max(1, Math.floor((deadline - start) / 1000)),
+  };
+};
+
 const getExamDraftKey = (studentId: number, examId: number) =>
   `examDraft:${studentId}:${examId}`;
 
@@ -171,6 +186,12 @@ export default function ExamInterface() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
+  // Absolute exam end as epoch ms. Timer is derived from this so it stays
+  // accurate across reloads/relogin and background-tab throttling.
+  const [deadline, setDeadline] = useState(0);
+  // Flips true when the clock hits the deadline; a dedicated effect then
+  // auto-submits with the latest answers (avoids a stale-closure submit).
+  const [timeUp, setTimeUp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -265,19 +286,15 @@ export default function ExamInterface() {
             try {
               const examQuestions = await api.getExamQuestions(activeExam.exam);
               const presentedExamQuestions = loadExam(examQuestions);
-              const endTime = new Date(activeExam.end_time).getTime();
-              const now = new Date().getTime();
-              const timeLeftSeconds = Math.max(
-                0,
-                Math.floor((endTime - now) / 1000)
-              );
-              setTimeLeft(timeLeftSeconds);
-              const startTime = new Date(activeExam.start_time).getTime();
-              const totalSeconds = Math.max(
-                1,
-                Math.floor((endTime - startTime) / 1000)
-              );
+              const { deadline, totalSeconds } = getExamWindow({
+                start_time: activeExam.start_time,
+                end_time: activeExam.end_time,
+                duration_minutes:
+                  examQuestions.exam_details?.duration_minutes ?? 120,
+              });
+              setDeadline(deadline);
               setTotalTime(totalSeconds);
+              setTimeLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
               await restoreDraftAnswers(
                 presentedExamQuestions.exam_id,
                 student.studentId
@@ -311,13 +328,32 @@ export default function ExamInterface() {
         const examQuestions = await api.getExamQuestions(selectedExamId);
         const presentedExamQuestions = loadExam(examQuestions);
 
-        // For now, set a default duration if not provided in the API response
-        // You might want to get this from the student scheduled exams API
-        const defaultDurationMinutes =
+        const durationMinutes =
           examQuestions.exam_details?.duration_minutes || 120;
-        const timeLeftSeconds = defaultDurationMinutes * 60;
-        setTimeLeft(timeLeftSeconds);
-        setTotalTime(timeLeftSeconds);
+
+        // Anchor the timer to the scheduled window stashed by the dashboard so
+        // it survives reloads/relogin. Fall back to duration-from-now only if
+        // the schedule is missing.
+        const scheduleStr = localStorage.getItem('selectedExamSchedule');
+        let examDeadline: number;
+        let totalSeconds: number;
+        if (scheduleStr) {
+          const schedule = JSON.parse(scheduleStr);
+          ({ deadline: examDeadline, totalSeconds } = getExamWindow({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            duration_minutes: schedule.duration_minutes || durationMinutes,
+          }));
+        } else {
+          // ponytail: no schedule → fall back to duration from now; this path
+          // resets on reload and needs a backend start timestamp to fix
+          // cross-device. Shouldn't happen once the dashboard stashes times.
+          examDeadline = Date.now() + durationMinutes * 60_000;
+          totalSeconds = durationMinutes * 60;
+        }
+        setDeadline(examDeadline);
+        setTotalTime(totalSeconds);
+        setTimeLeft(Math.max(0, Math.round((examDeadline - Date.now()) / 1000)));
 
         // Restore any answers already saved on the server (recovery).
         await restoreDraftAnswers(
@@ -345,14 +381,32 @@ export default function ExamInterface() {
   }, [router]);
 
   useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && examData) {
-      // Auto-submit when time is up
-      handleSubmitExam();
-    }
-  }, [timeLeft, examData]);
+    if (!deadline || !examData) return;
+
+    const tick = () => {
+      const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+      setTimeLeft(left);
+      // Just flag time-up; the submit effect below handles it with fresh answers.
+      if (left <= 0) setTimeUp(true);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [deadline, examData]);
+
+  // Auto-submit the student's saved drafts when time runs out, even if they
+  // never clicked Submit. Runs when `timeUp` flips, so it captures the latest
+  // `answers` (not the stale snapshot the interval closure would hold).
+  useEffect(() => {
+    if (!timeUp || !examData || !studentData || submitting) return;
+    const submittedKey = getExamSubmittedKey(
+      studentData.studentId,
+      examData.exam_id
+    );
+    if (localStorage.getItem(submittedKey) === 'true') return;
+    handleSubmitExam();
+  }, [timeUp, examData, studentData, submitting]);
 
   const persistAnswer = async (questionId: number, answer: string) => {
     if (!examData || !studentData) return;
@@ -406,6 +460,7 @@ export default function ExamInterface() {
     localStorage.removeItem('studentData');
     localStorage.removeItem('examSchedule');
     localStorage.removeItem('selectedExamId');
+    localStorage.removeItem('selectedExamSchedule');
     router.push('/');
   };
 

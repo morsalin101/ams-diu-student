@@ -193,9 +193,18 @@ export default function StudentDashboard() {
     return () => clearInterval(timer);
   }, [scheduledExams, examTimers]);
 
-  const handleStartExam = (examId: number) => {
-    // Store the selected exam ID for the exam interface
-    localStorage.setItem('selectedExamId', examId.toString());
+  const handleStartExam = (exam: ScheduledExam) => {
+    // Store the selected exam ID + its schedule window so the exam timer can
+    // anchor to the scheduled start/end and stay consistent across reloads.
+    localStorage.setItem('selectedExamId', exam.exam_id.toString());
+    localStorage.setItem(
+      'selectedExamSchedule',
+      JSON.stringify({
+        start_time: exam.schedule_details.start_time,
+        end_time: exam.schedule_details.end_time,
+        duration_minutes: exam.exam_details.duration_minutes,
+      }),
+    );
     router.push('/exam');
   };
 
@@ -250,6 +259,7 @@ export default function StudentDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('studentData');
     localStorage.removeItem('selectedExamId');
+    localStorage.removeItem('selectedExamSchedule');
     router.push('/');
   };
 
@@ -837,9 +847,7 @@ export default function StudentDashboard() {
                                       </div>
                                     ) : (
                                       <Button
-                                        onClick={() =>
-                                          handleStartExam(exam.exam_id)
-                                        }
+                                        onClick={() => handleStartExam(exam)}
                                         className="w-full py-5 rounded-2xl text-lg font-extrabold bg-gradient-to-r from-blue-600 to-blue-500 shadow-xl text-white flex items-center justify-center gap-2"
                                       >
                                         <svg
