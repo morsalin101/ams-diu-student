@@ -405,8 +405,20 @@ export default function ExamInterface() {
       examData.exam_id
     );
     if (localStorage.getItem(submittedKey) === 'true') return;
+
+    // Nothing answered → the backend (correctly) 400s on an empty submit and the
+    // student stays ABSENT. Don't loop on that — mark done locally and leave.
+    if (Object.keys(getSubmittedAnswers(answers)).length === 0) {
+      localStorage.setItem(submittedKey, 'true');
+      localStorage.removeItem(
+        getExamDraftKey(studentData.studentId, examData.exam_id)
+      );
+      router.push('/results');
+      return;
+    }
+
     handleSubmitExam();
-  }, [timeUp, examData, studentData, submitting]);
+  }, [timeUp, examData, studentData, submitting, answers]);
 
   const persistAnswer = async (questionId: number, answer: string) => {
     if (!examData || !studentData) return;
