@@ -597,7 +597,7 @@ export default function ExamInterface() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-3 py-2 md:px-4 md:py-3 sticky top-0 z-20 shadow-sm">
+      <div className="bg-white border-b border-gray-200 px-3 py-3 md:px-4 md:py-5 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           {/* Left: Logo + University Info */}
           <div className="flex items-center gap-2 md:gap-4 min-w-0">
@@ -623,7 +623,7 @@ export default function ExamInterface() {
 
           {/* Right: Timer + Logout */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={88} />
+            <CircularTimer timeLeft={timeLeft} totalTime={totalTime} size={100} />
             <button
               onClick={handleLogout}
               className="p-2 rounded-full text-red-600 hover:bg-red-50 transition-colors duration-200"
