@@ -768,7 +768,7 @@ export default function ExamInterface() {
         ref={setHeaderEl}
         className="bg-white border-b border-gray-200 px-3 py-3 md:px-4 md:py-5 sticky top-0 z-20 shadow-sm"
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           {/* Left: Logo + University Info */}
           <div className="flex items-center gap-2 md:gap-4 min-w-0">
             <Image
@@ -834,17 +834,17 @@ export default function ExamInterface() {
         </div>
       </div>
 
-      <div className="lg:pl-64">
-        {/* Left navigator — fixed so it stays put while the page scrolls */}
+      <div className="max-w-7xl mx-auto lg:flex lg:items-start">
+        {/* Left navigator — sticky inside the same centered band as the header */}
         <aside
-          className="hidden lg:block fixed left-0 z-10 w-64 overflow-y-auto border-r border-gray-200 bg-white p-4"
-          style={{ top: headerH, bottom: 0 }}
+          className="hidden lg:block sticky w-64 shrink-0 overflow-y-auto border-r border-gray-200 bg-white p-4"
+          style={{ top: headerH, maxHeight: `calc(100vh - ${headerH}px)` }}
         >
           {renderNavigator()}
         </aside>
 
         {/* Main column */}
-        <div className="min-w-0">
+        <div className="min-w-0 lg:flex-1">
           <div className="max-w-5xl mx-auto p-3 md:p-4">
             {/* Questions */}
         <Card className="border-gray-200 bg-white">
