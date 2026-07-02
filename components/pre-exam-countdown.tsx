@@ -58,7 +58,12 @@ export default function PreExamCountdown() {
     if (scheduleDataStr) {
       setExamSchedule(JSON.parse(scheduleDataStr))
     }
-    
+
+    // Anchor the countdown to the server clock, not the local device clock.
+    api.syncServerTime().catch(err => {
+      console.error('Failed to sync server time:', err)
+    })
+
     setLoading(false)
   }, [router])
 

@@ -17,8 +17,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { CircularTimer } from '@/components/circular-timer';
+import { ArrowUp, ListChecks, X } from 'lucide-react';
 import Image from 'next/image';
-import { api } from '@/lib/utils';
+import { api, serverNow } from '@/lib/utils';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -197,6 +198,11 @@ export default function ExamInterface() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [error, setError] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [showTopButton, setShowTopButton] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [pendingScrollId, setPendingScrollId] = useState<number | null>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerH, setHeaderH] = useState(0);
   const router = useRouter();
 
   // Per-question debounce timers for autosaving text answers.
@@ -237,6 +243,13 @@ export default function ExamInterface() {
 
       const student = JSON.parse(studentDataStr);
       setStudentData(student);
+
+      // Anchor the countdown to the server clock so it's identical on every
+      // machine regardless of the local PC time. Best-effort: on failure we
+      // fall back to the local clock (offset 0).
+      await api.syncServerTime().catch(err => {
+        console.error('Failed to sync server time:', err);
+      });
 
       const loadExam = (examQuestions: ExamData) => {
         const presentedExamQuestions = applyExamPresentationShuffle(
@@ -294,7 +307,7 @@ export default function ExamInterface() {
               });
               setDeadline(deadline);
               setTotalTime(totalSeconds);
-              setTimeLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+              setTimeLeft(Math.max(0, Math.round((deadline - serverNow()) / 1000)));
               await restoreDraftAnswers(
                 presentedExamQuestions.exam_id,
                 student.studentId
@@ -348,12 +361,12 @@ export default function ExamInterface() {
           // ponytail: no schedule → fall back to duration from now; this path
           // resets on reload and needs a backend start timestamp to fix
           // cross-device. Shouldn't happen once the dashboard stashes times.
-          examDeadline = Date.now() + durationMinutes * 60_000;
+          examDeadline = serverNow() + durationMinutes * 60_000;
           totalSeconds = durationMinutes * 60;
         }
         setDeadline(examDeadline);
         setTotalTime(totalSeconds);
-        setTimeLeft(Math.max(0, Math.round((examDeadline - Date.now()) / 1000)));
+        setTimeLeft(Math.max(0, Math.round((examDeadline - serverNow()) / 1000)));
 
         // Restore any answers already saved on the server (recovery).
         await restoreDraftAnswers(
@@ -384,7 +397,7 @@ export default function ExamInterface() {
     if (!deadline || !examData) return;
 
     const tick = () => {
-      const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+      const left = Math.max(0, Math.round((deadline - serverNow()) / 1000));
       setTimeLeft(left);
       // Just flag time-up; the submit effect below handles it with fresh answers.
       if (left <= 0) setTimeUp(true);
@@ -419,6 +432,45 @@ export default function ExamInterface() {
 
     handleSubmitExam();
   }, [timeUp, examData, studentData, submitting, answers]);
+
+  // Show the back-to-top button once the student has scrolled down a bit.
+  useEffect(() => {
+    const onScroll = () => setShowTopButton(window.scrollY > 300);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Measure the (responsive) sticky header so the navigator sits just below it
+  // and never overlaps. Re-measures when the exam loads and on resize.
+  useEffect(() => {
+    const measure = () => setHeaderH(headerRef.current?.offsetHeight ?? 0);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [examData]);
+
+  // Scroll to a question requested from the navigator. Depends on
+  // currentSubject so that when jumpToQuestion had to switch back to "All",
+  // the effect re-runs once the target question is actually in the DOM.
+  useEffect(() => {
+    if (pendingScrollId == null) return;
+    const id = pendingScrollId;
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`q-${id}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    setPendingScrollId(null);
+  }, [pendingScrollId, currentSubject]);
+
+  const jumpToQuestion = (question: Question) => {
+    if (currentSubject !== 'All' && currentSubject !== question.subject) {
+      setCurrentSubject('All');
+    }
+    setPendingScrollId(question.question_id);
+    setNavOpen(false);
+  };
 
   const persistAnswer = async (questionId: number, answer: string) => {
     if (!examData || !studentData) return;
@@ -605,11 +657,110 @@ export default function ExamInterface() {
   }
 
   const currentSubjectQuestions = getCurrentSubjectQuestions();
+  const questionNumberById: Record<number, number> = Object.fromEntries(
+    examData.questions.map((q, i) => [q.question_id, i + 1])
+  );
+
+  const renderNavigator = () => (
+    <>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-base font-semibold text-gray-900">Questions</span>
+        <button
+          type="button"
+          onClick={() => setNavOpen(false)}
+          className="lg:hidden text-gray-500 hover:text-gray-700"
+          aria-label="Close navigator"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Subject filters double as buttons: pick "All" or a subject */}
+      <button
+        type="button"
+        onClick={() => {
+          setCurrentSubject('All');
+          setNavOpen(false);
+        }}
+        className={`w-full mb-3 flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-colors ${
+          currentSubject === 'All'
+            ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white border-[#2E3094]'
+            : 'bg-white text-gray-700 border-gray-300 hover:border-[#2E3094]'
+        }`}
+      >
+        <span>All Questions</span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs ${
+            currentSubject === 'All'
+              ? 'bg-white/20'
+              : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {getTotalAnsweredCount()}/{examData.exam_details.total_questions}
+        </span>
+      </button>
+
+      <div className="space-y-3">
+        {subjects.map(subject => (
+          <div key={subject}>
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentSubject(subject);
+                setNavOpen(false);
+              }}
+              className={`w-full mb-1.5 flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm font-semibold shadow-sm transition-colors ${
+                currentSubject === subject
+                  ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white border-[#2E3094]'
+                  : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100 hover:border-[#2E3094] hover:text-[#2E3094]'
+              }`}
+            >
+              <span className="truncate">{subject}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs ${
+                  currentSubject === subject
+                    ? 'bg-white/20'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                {getAnsweredCount(subject)}/{getTotalQuestions(subject)}
+              </span>
+            </button>
+            <div className="flex flex-wrap gap-1">
+              {examData.questions
+                .filter(q => q.subject === subject)
+                .map(q => {
+                  const answered = Boolean(answers[q.question_id]);
+                  return (
+                    <button
+                      key={q.question_id}
+                      type="button"
+                      onClick={() => jumpToQuestion(q)}
+                      title={`Question ${questionNumberById[q.question_id]}`}
+                      className={`h-8 w-8 rounded text-xs font-semibold border transition-colors ${
+                        answered
+                          ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white border-[#2E3094]'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-[#2E3094] hover:text-[#2E3094]'
+                      }`}
+                    >
+                      {questionNumberById[q.question_id]}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-3 py-3 md:px-4 md:py-5 sticky top-0 z-20 shadow-sm">
+      <div
+        ref={headerRef}
+        className="bg-white border-b border-gray-200 px-3 py-3 md:px-4 md:py-5 sticky top-0 z-20 shadow-sm"
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           {/* Left: Logo + University Info */}
           <div className="flex items-center gap-2 md:gap-4 min-w-0">
@@ -676,77 +827,19 @@ export default function ExamInterface() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-3 md:p-4">
-        <div className="mb-6">
-          <Card className="border-gray-200 bg-white">
-            <CardHeader>
-              <div>
-                <CardTitle className="text-gray-900 text-lg md:text-xl">
-                  Total Questions: {examData.exam_details.total_questions}
-                </CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
-                  Select a subject to filter questions or view all at once
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                {/* All Questions Button */}
+      <div className="lg:pl-64">
+        {/* Left navigator — fixed so it stays put while the page scrolls */}
+        <aside
+          className="hidden lg:block fixed left-0 z-30 w-64 overflow-y-auto border-r border-gray-200 bg-white p-4"
+          style={{ top: headerH, bottom: 0 }}
+        >
+          {renderNavigator()}
+        </aside>
 
-                <Button
-                  variant={currentSubject === 'All' ? 'default' : 'outline'}
-                  className={`flex items-center gap-2 ${
-                    currentSubject === 'All'
-                      ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white border-[#2E3094]'
-                      : '!bg-zinc-100/50 text-gray-600 hover:border-gray-400  hover:text-gray-800 border-gray-300 shadow-sm'
-                  }`}
-                  onClick={() => setCurrentSubject('All')}
-                >
-                  <span>All Questions</span>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      currentSubject === 'All'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-gray-100 text-gray-600'
-                    }
-                  >
-                    {getTotalAnsweredCount()}/
-                    {examData?.exam_details.total_questions || 0}
-                  </Badge>
-                </Button>
-
-                {/* Subject Buttons */}
-                {subjects.map(subject => (
-                  <Button
-                    key={subject}
-                    variant={currentSubject === subject ? 'default' : 'outline'}
-                    className={`flex items-center gap-2 ${
-                      currentSubject === subject
-                        ? 'bg-gradient-to-r from-[#2E3094] to-[#4C51BF] hover:from-[#252865] hover:to-[#3d42a3] text-white border-[#2E3094]'
-                        : '!bg-zinc-100/50 text-gray-600 hover:border-gray-400  hover:text-gray-800 border-gray-300 shadow-sm'
-                    }`}
-                    onClick={() => setCurrentSubject(subject)}
-                  >
-                    <span>{subject}</span>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        currentSubject === subject
-                          ? 'bg-white/20 text-white'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                      }
-                    >
-                      {getAnsweredCount(subject)}/{getTotalQuestions(subject)}
-                    </Badge>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Questions */}
+        {/* Main column */}
+        <div className="min-w-0">
+          <div className="max-w-5xl mx-auto p-3 md:p-4">
+            {/* Questions */}
         <Card className="border-gray-200 bg-white">
           <CardHeader>
             <CardTitle className="text-gray-900">
@@ -768,7 +861,8 @@ export default function ExamInterface() {
               return (
                 <div
                   key={question.question_id}
-                  className="space-y-3 p-3 border border-gray-100 rounded-lg"
+                  id={`q-${question.question_id}`}
+                  className="space-y-3 p-3 border border-gray-100 rounded-lg scroll-mt-28"
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
@@ -948,7 +1042,50 @@ export default function ExamInterface() {
             </CardContent>
           </Card>
         </div>
+          </div>
+        </div>
       </div>
+
+      {/* Mobile navigator drawer (below-lg): opened via the list button */}
+      {navOpen && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setNavOpen(false)}
+          />
+          <div
+            className="absolute left-0 bottom-0 w-72 max-w-[85%] overflow-y-auto bg-white p-4 shadow-xl"
+            style={{ top: headerH }}
+          >
+            {renderNavigator()}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile: open the navigator */}
+      {!navOpen && (
+        <button
+          type="button"
+          onClick={() => setNavOpen(true)}
+          className="lg:hidden fixed bottom-6 left-6 z-40 h-12 w-12 rounded-full bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white shadow-lg flex items-center justify-center"
+          aria-label="Open question navigator"
+        >
+          <ListChecks className="h-5 w-5" />
+        </button>
+      )}
+
+      {/* Back to top */}
+      {showTopButton && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-40 h-12 w-12 rounded-full bg-gradient-to-r from-[#2E3094] to-[#4C51BF] text-white shadow-lg flex items-center justify-center hover:from-[#252865] hover:to-[#3d42a3]"
+          aria-label="Back to top"
+          title="Back to top"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
 
       {/* Submit confirmation dialog */}
       <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>

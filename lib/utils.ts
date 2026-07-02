@@ -8,8 +8,40 @@ export function cn(...inputs: ClassValue[]) {
 // API Base URL
 const API_BASE_URL = 'https://api.tatomal.me/api';
 
+// Offset between the server (VPS) clock and this device's clock, in ms.
+// Kept in sync by api.syncServerTime() so every countdown is anchored to the
+// backend rather than the local PC clock (which can be misconfigured).
+let clockOffsetMs = 0;
+
+// The backend-anchored "now". Falls back to the local clock (offset 0) until
+// the first successful sync, then self-corrects.
+export const serverNow = () => Date.now() + clockOffsetMs;
+
 // API utility functions
 export const api = {
+  // Sync this device's clock to the server. Uses the request round-trip
+  // midpoint to estimate the offset, so timers match across all students'
+  // machines regardless of their local clock.
+  syncServerTime: async () => {
+    const t0 = Date.now();
+    const response = await fetch(`${API_BASE_URL}/server-time/`, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+    });
+    const t1 = Date.now();
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch server time');
+    }
+
+    const data = await response.json();
+    const serverMs = Number(data?.now_ms);
+    if (Number.isFinite(serverMs)) {
+      clockOffsetMs = serverMs - (t0 + t1) / 2;
+    }
+    return clockOffsetMs;
+  },
+
   // Student login
   login: async (username: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/student/login/`, {
@@ -238,20 +270,20 @@ export const timeUtils = {
   },
 
   calculateTimeUntilExam: (startTime: string) => {
-    const now = new Date().getTime();
+    const now = serverNow();
     const examStart = new Date(startTime).getTime();
     return Math.floor((examStart - now) / 1000);
   },
 
   isExamActive: (startTime: string, endTime: string) => {
-    const now = new Date().getTime();
+    const now = serverNow();
     const start = new Date(startTime).getTime();
     const end = new Date(endTime).getTime();
     return now >= start && now < end;
   },
 
   isExamEnded: (endTime: string) => {
-    const now = new Date().getTime();
+    const now = serverNow();
     const end = new Date(endTime).getTime();
     return now >= end;
   },

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { timeUtils, api } from '@/lib/utils';
+import { timeUtils, api, serverNow } from '@/lib/utils';
 
 interface StudentInfo {
   username: string;
@@ -107,6 +107,10 @@ export default function StudentDashboard() {
 
   const fetchScheduledExams = async (studentId: number) => {
     try {
+      // Anchor exam timers to the server clock (not the local device clock).
+      await api.syncServerTime().catch(err => {
+        console.error('Failed to sync server time:', err);
+      });
       const data = await api.getStudentScheduledExams(studentId);
       setScheduledExams(data);
       initializeTimers(data.scheduled_exams);
@@ -129,7 +133,7 @@ export default function StudentDashboard() {
     > = {};
 
     exams.forEach(exam => {
-      const now = new Date().getTime();
+      const now = serverNow();
       const startTime = new Date(exam.schedule_details.start_time).getTime();
       const endTime = new Date(exam.schedule_details.end_time).getTime();
 
@@ -157,7 +161,7 @@ export default function StudentDashboard() {
       let hasChanges = false;
 
       scheduledExams.scheduled_exams.forEach(exam => {
-        const now = new Date().getTime();
+        const now = serverNow();
         const startTime = new Date(exam.schedule_details.start_time).getTime();
         const endTime = new Date(exam.schedule_details.end_time).getTime();
 
