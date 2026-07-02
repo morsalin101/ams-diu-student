@@ -201,7 +201,9 @@ export default function ExamInterface() {
   const [showTopButton, setShowTopButton] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [pendingScrollId, setPendingScrollId] = useState<number | null>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
+  // Callback-ref state so the measure effect runs when the header actually
+  // mounts (it only exists after loading finishes, not when examData is set).
+  const [headerEl, setHeaderEl] = useState<HTMLDivElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
   const router = useRouter();
 
@@ -442,13 +444,18 @@ export default function ExamInterface() {
   }, []);
 
   // Measure the (responsive) sticky header so the navigator sits just below it
-  // and never overlaps. Re-measures when the exam loads and on resize.
+  // and never overlaps. A ResizeObserver re-measures on any header size change
+  // (font/logo load, browser zoom, viewport resize). Keyed to the mounted
+  // element itself — keying on data states measured too early (header not in
+  // the DOM yet) and left headerH at 0, hiding the navigator's top.
   useEffect(() => {
-    const measure = () => setHeaderH(headerRef.current?.offsetHeight ?? 0);
+    if (!headerEl) return;
+    const measure = () => setHeaderH(headerEl.offsetHeight);
     measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [examData]);
+    const observer = new ResizeObserver(measure);
+    observer.observe(headerEl);
+    return () => observer.disconnect();
+  }, [headerEl]);
 
   // Scroll to a question requested from the navigator. Depends on
   // currentSubject so that when jumpToQuestion had to switch back to "All",
@@ -758,10 +765,10 @@ export default function ExamInterface() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div
-        ref={headerRef}
+        ref={setHeaderEl}
         className="bg-white border-b border-gray-200 px-3 py-3 md:px-4 md:py-5 sticky top-0 z-20 shadow-sm"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           {/* Left: Logo + University Info */}
           <div className="flex items-center gap-2 md:gap-4 min-w-0">
             <Image
@@ -830,7 +837,7 @@ export default function ExamInterface() {
       <div className="lg:pl-64">
         {/* Left navigator — fixed so it stays put while the page scrolls */}
         <aside
-          className="hidden lg:block fixed left-0 z-30 w-64 overflow-y-auto border-r border-gray-200 bg-white p-4"
+          className="hidden lg:block fixed left-0 z-10 w-64 overflow-y-auto border-r border-gray-200 bg-white p-4"
           style={{ top: headerH, bottom: 0 }}
         >
           {renderNavigator()}
