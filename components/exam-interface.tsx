@@ -159,19 +159,35 @@ const applyExamPresentationShuffle = (
     questionsBySubject.get(question.subject)?.push(question);
   });
 
-  const shuffledQuestions = subjectOrder.flatMap(subject =>
-    getSeededShuffle(
-      questionsBySubject.get(subject) || [],
+  const shuffledQuestions = subjectOrder.flatMap(subject => {
+    const subjectQuestions = questionsBySubject.get(subject) || [];
+
+    // "Question set" behavior: a base order shared by the whole exam, with
+    // each student's FIRST question picked by studentId — so consecutive
+    // student IDs are guaranteed to open on different questions instead of
+    // colliding by chance. The remaining questions are then shuffled
+    // per-student as before, so no two students share a sequence.
+    const base = getSeededShuffle(
+      subjectQuestions,
+      `${examQuestions.exam_id}:subject:${subject}:base`
+    );
+    const startIndex =
+      base.length > 0 ? Math.abs(Number(studentId) || 0) % base.length : 0;
+    const first = base[startIndex];
+    const rest = getSeededShuffle(
+      base.filter((_, index) => index !== startIndex),
       `${studentId}:${examQuestions.exam_id}:subject:${subject}`
-    ).map(question => ({
+    );
+
+    return (first ? [first, ...rest] : rest).map(question => ({
       ...question,
       displayOptions: getDisplayOptions(
         question,
         studentId,
         examQuestions.exam_id
       ),
-    }))
-  );
+    }));
+  });
 
   return {
     ...examQuestions,
@@ -881,27 +897,27 @@ export default function ExamInterface() {
                           <h3 className="text-sm md:text-base font-semibold text-black break-words">
                             {question.question_text}
                           </h3>
-                          {currentSubject === 'All' && (
-                            <Badge
-                              variant="outline"
-                              className="mt-2 border-blue-300 text-blue-700 bg-blue-50"
-                            >
-                              {question.subject}
-                            </Badge>
-                          )}
                         </div>
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className="ml-4 border-[#2E3094] text-[#2E3094] flex-shrink-0"
-                    >
-                      {question.marks} {question.marks === 1 ? 'mark' : 'marks'}
-                    </Badge>
+                    <div className="ml-4 flex flex-shrink-0 items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-blue-300 text-blue-700 bg-blue-50"
+                      >
+                        {question.subject}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="border-[#2E3094] text-[#2E3094]"
+                      >
+                        {question.marks} {question.marks === 1 ? 'mark' : 'marks'}
+                      </Badge>
+                    </div>
                   </div>
 
                   {question.question_type === 'option' ? (
-                    <div className="space-y-2 md:space-y-2.5">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:gap-2.5">
                       {(
                         question.displayOptions ||
                         getDisplayOptions(
@@ -922,9 +938,10 @@ export default function ExamInterface() {
                                   : 'border-gray-200 hover:border-[#2E3094]'
                               }`}
                               onClick={() =>
+                                // Clicking the selected option again deselects it.
                                 handleAnswerChange(
                                   question.question_id,
-                                  option.originalKey
+                                  isSelected ? '' : option.originalKey
                                 )
                               }
                             >
@@ -1028,7 +1045,7 @@ export default function ExamInterface() {
                 )}
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                Answered: {Object.keys(answers).length} /{' '}
+                Answered: {getTotalAnsweredCount()} /{' '}
                 {examData.exam_details.total_questions} questions
               </p>
               <p className="text-xs mt-1 h-4">
