@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
+import { DisableContextMenu } from "@/components/disable-context-menu"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -23,7 +24,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} overflow-x-hidden`}>{children}</body>
+      <body className={`${inter.className} overflow-x-hidden`}>
+        <DisableContextMenu />
+        {children}
+      </body>
     </html>
   )
 }
