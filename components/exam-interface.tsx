@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { CircularTimer } from '@/components/circular-timer';
+import { MathText } from '@/components/math-text';
 import { ArrowUp, ListChecks, X } from 'lucide-react';
 import Image from 'next/image';
 import { api, serverNow } from '@/lib/utils';
@@ -895,7 +896,7 @@ export default function ExamInterface() {
                         </span>
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm md:text-base font-semibold text-black break-words">
-                            {question.question_text}
+                            <MathText text={question.question_text} />
                           </h3>
                         </div>
                       </div>
@@ -966,7 +967,7 @@ export default function ExamInterface() {
                                 <span className="font-semibold text-black mr-2">
                                   {option.displayKey}.
                                 </span>
-                                {option.value}
+                                <MathText text={option.value} />
                               </Label>
                             </div>
                           );

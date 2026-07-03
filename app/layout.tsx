@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { DisableContextMenu } from "@/components/disable-context-menu"
+import "katex/dist/katex.min.css"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
