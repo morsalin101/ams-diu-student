@@ -5,8 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// API Base URL
-const API_BASE_URL = 'https://ams-diu-backend-l1ag.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ams-diu-backend-l1ag.onrender.com/api';
 
 // API utility functions
 export const api = {
